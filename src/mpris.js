@@ -6,6 +6,7 @@ const MPRIS_PLAYER_INTERFACE = 'org.mpris.MediaPlayer2.Player';
 const OBJECT_PATH = '/org/mpris/MediaPlayer2';
 const MAX_RECENT_PER_PLAYER = 5;
 const MAX_RECENT_TOTAL = 20;
+const PROPERTY_REFRESH_DELAY_MS = 150;
 
 function unwrap(value) {
     while (value instanceof GLib.Variant)
@@ -94,6 +95,7 @@ export class MprisMonitor {
         this._onInitialScanComplete = onInitialScanComplete;
         this._cancellable = new Gio.Cancellable();
         this._subscriptions = [];
+        this._refreshSources = new Map();
         this._players = new Map();
         this._recent = new Map();
         this._busNames = new Set();
@@ -131,7 +133,7 @@ export class MprisMonitor {
                 const [changedInterface] = parameters.deepUnpack();
                 const name = this._owners.get(sender);
                 if (changedInterface === MPRIS_PLAYER_INTERFACE && name)
-                    this._refresh(name);
+                    this._scheduleRefresh(name);
             }));
         this._listNames();
     }
@@ -144,6 +146,9 @@ export class MprisMonitor {
         for (const id of this._subscriptions)
             Gio.DBus.session.signal_unsubscribe(id);
         this._subscriptions = [];
+        for (const id of this._refreshSources.values())
+            GLib.Source.remove(id);
+        this._refreshSources.clear();
         this._players.clear();
         this._recent.clear();
         this._busNames.clear();
@@ -207,6 +212,18 @@ export class MprisMonitor {
                 } catch (_) {
                 }
             });
+    }
+
+    _scheduleRefresh(busName) {
+        if (this._destroyed || this._refreshSources.has(busName))
+            return;
+        const id = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, PROPERTY_REFRESH_DELAY_MS, () => {
+                this._refreshSources.delete(busName);
+                this._refresh(busName);
+                return GLib.SOURCE_REMOVE;
+            });
+        this._refreshSources.set(busName, id);
     }
 
     _refresh(busName, callback = null) {
