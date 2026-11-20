@@ -3,50 +3,24 @@ import GLib from 'gi://GLib';
 
 import {mediaUrl} from './mpris.js';
 
+const ISLE_BUS_NAME = 'io.github.zickrian.isle.Daemon';
+const ISLE_OBJECT_PATH = '/io/github/zickrian/isle/Daemon';
 const HISTORY_LIMIT = 5;
-const HISTORY_SCAN_LIMIT = 50;
+const HISTORY_SCAN_LIMIT = 30;
+const URL_PATTERN = /https?:\/\/[^\s<>"']+/i;
+const ISLE_CLIPBOARD_XML = `<node><interface name="io.github.zickrian.isle.Clipboard1">
+    <method name="GetText"><arg name="id" type="t" direction="in"/><arg type="s" direction="out"/></method>
+    <property name="Items" type="s" access="read"/>
+</interface></node>`;
 
-function runCommand(argv, input, cancellable, callback) {
-    let flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE;
-    if (input !== null)
-        flags |= Gio.SubprocessFlags.STDIN_PIPE;
-
-    let process;
-    try {
-        process = Gio.Subprocess.new(argv, flags);
-    } catch (_) {
-        callback(null);
-        return;
-    }
-
-    process.communicate_utf8_async(input, cancellable, (subprocess, result) => {
-        try {
-            const [communicated, stdout] = subprocess.communicate_utf8_finish(result);
-            callback(communicated && subprocess.get_successful() ? stdout : null);
-        } catch (_) {
-            callback(null);
-        }
-    });
-}
-
-export function parseCliphistRows(output) {
-    if (!output)
-        return [];
-    return output.split(/\r?\n/).filter(Boolean).slice(0, HISTORY_SCAN_LIMIT).flatMap(line => {
-        const separator = line.indexOf('\t');
-        if (separator <= 0)
-            return [];
-        const preview = line.slice(separator + 1).trim();
-        if (!/^https?:\/\//i.test(preview))
-            return [];
-        return [{id: line.slice(0, separator), line}];
-    });
-}
-
-function videoFromHistory(text, id) {
-    const url = mediaUrl(text?.trim());
-    if (!url)
+function extractUrl(text) {
+    const match = String(text ?? '').match(URL_PATTERN);
+    if (!match)
         return null;
+    return mediaUrl(match[0].replace(/[),.;!?\]}]+$/, ''));
+}
+
+function videoFromHistory(url, id) {
     try {
         const parsed = GLib.Uri.parse(url, GLib.UriFlags.NONE);
         return {
@@ -54,7 +28,7 @@ function videoFromHistory(text, id) {
             title: parsed.get_host() ?? 'Clipboard URL',
             position: 0,
             status: 'Stopped',
-            source: 'clipboard-history',
+            source: 'isle-clipboard-history',
             historyId: id,
         };
     } catch (_) {
@@ -62,47 +36,75 @@ function videoFromHistory(text, id) {
     }
 }
 
+export function parseIsleItems(serialized) {
+    try {
+        const items = JSON.parse(serialized ?? '[]');
+        if (!Array.isArray(items))
+            return [];
+        return items.filter(item =>
+            item && (item.kind === 'link' || item.kind === 'text') && item.id !== undefined &&
+            extractUrl(item.preview))
+            .sort((left, right) => Number(right.at_ms ?? 0) - Number(left.at_ms ?? 0))
+            .slice(0, HISTORY_SCAN_LIMIT);
+    } catch (_) {
+        return [];
+    }
+}
+
 export class ClipboardHistory {
     constructor() {
+        this._destroyed = false;
+        this._proxy = null;
         this._generation = 0;
-        this._cancellable = null;
-    }
-
-    refresh(callback) {
-        this._cancellable?.cancel();
-        this._cancellable = new Gio.Cancellable();
-        const generation = ++this._generation;
-        const cancellable = this._cancellable;
-        runCommand(['cliphist', 'list'], null, cancellable, output => {
-            if (generation !== this._generation)
+        const Proxy = Gio.DBusProxy.makeProxyWrapper(ISLE_CLIPBOARD_XML);
+        new Proxy(Gio.DBus.session, ISLE_BUS_NAME, ISLE_OBJECT_PATH, (proxy, error) => {
+            if (this._destroyed || error)
                 return;
-            const rows = parseCliphistRows(output);
-            const videos = [];
-            const seen = new Set();
-            const decodeNext = index => {
-                if (generation !== this._generation)
-                    return;
-                if (index >= rows.length || videos.length >= HISTORY_LIMIT) {
-                    callback(videos);
-                    return;
-                }
-                const row = rows[index];
-                runCommand(['cliphist', 'decode'], `${row.line}\n`, cancellable, decoded => {
-                    const video = videoFromHistory(decoded, row.id);
-                    if (video && !seen.has(video.url)) {
-                        seen.add(video.url);
-                        videos.push(video);
-                    }
-                    decodeNext(index + 1);
-                });
-            };
-            decodeNext(0);
+            this._proxy = proxy;
         });
     }
 
+    refresh(callback) {
+        const generation = ++this._generation;
+        if (this._destroyed || !this._proxy) {
+            callback([]);
+            return;
+        }
+
+        const items = parseIsleItems(this._proxy.Items);
+        const videos = [];
+        const seen = new Set();
+        const decodeNext = index => {
+            if (this._destroyed || generation !== this._generation)
+                return;
+            if (index >= items.length || videos.length >= HISTORY_LIMIT) {
+                callback(videos);
+                return;
+            }
+
+            const item = items[index];
+            const addUrl = url => {
+                const video = videoFromHistory(url, item.id);
+                if (video && !seen.has(video.url)) {
+                    seen.add(video.url);
+                    videos.push(video);
+                }
+                decodeNext(index + 1);
+            };
+
+            const previewUrl = extractUrl(item.preview);
+            this._proxy.GetTextRemote(item.id, (result, error) => {
+                if (this._destroyed || generation !== this._generation)
+                    return;
+                addUrl(error ? previewUrl : extractUrl(result?.[0]) ?? previewUrl);
+            });
+        };
+        decodeNext(0);
+    }
+
     destroy() {
+        this._destroyed = true;
         this._generation++;
-        this._cancellable?.cancel();
-        this._cancellable = null;
+        this._proxy = null;
     }
 }

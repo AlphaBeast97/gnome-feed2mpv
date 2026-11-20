@@ -1,17 +1,18 @@
-import {parseCliphistRows} from '../clipboard-history.js';
+import {parseIsleItems} from '../clipboard-history.js';
 
-const rows = parseCliphistRows([
-    '14\thttps://youtu.be/abcdefghijk',
-    '13\tplain text',
-    '12\thttps://example.com/watch?id=2…',
-    '11\t[image/png]',
-    '10\thttps://example.com/older',
-    '9\thttps://example.com/oldest-in-scan',
-].join('\n'));
+const items = parseIsleItems(JSON.stringify([
+    {id: 18, kind: 'link', preview: 'https://youtu.be/abcdefghijk', at_ms: 300},
+    {id: 17, kind: 'text', preview: 'Watch this https://example.com/video', at_ms: 200},
+    {id: 16, kind: 'image', preview: 'https://example.com/not-a-link-entry'},
+    {id: 15, kind: 'link', preview: 'https://example.com/watch…', at_ms: 100},
+    {id: 14, kind: 'link', preview: 'https://example.com/pinned-old', pinned: true, at_ms: 10},
+]));
 
-if (rows.length !== 4)
-    throw new Error(`expected 4 URL previews in the scan window, got ${rows.length}`);
-if (rows[0].id !== '14' || rows[3].id !== '9')
-    throw new Error('clipboard history order was not preserved');
+if (items.length !== 4)
+    throw new Error(`expected four URL-bearing Isle entries, got ${items.length}`);
+if (items[0].id !== 18 || items[1].id !== 17 || items[3].id !== 14)
+    throw new Error('Isle clipboard history was not ordered by newest copy time');
+if (parseIsleItems('not JSON').length !== 0)
+    throw new Error('malformed Isle data should produce an empty history');
 
-print('Clipboard history checks passed');
+print('Isle clipboard history checks passed');

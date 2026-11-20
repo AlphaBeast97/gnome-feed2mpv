@@ -1,4 +1,3 @@
-import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -38,25 +37,12 @@ export default class YouTubeToMpvExtension extends Extension {
         this._clipboardHistory = new ClipboardHistory();
 
         this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
-        this._indicatorContent = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         this._icon = new St.Icon({
-            icon_name: 'media-playback-stop-symbolic',
+            icon_name: 'video-x-generic-symbolic',
             style_class: 'system-status-icon',
         });
-        this._statusLabel = new St.Label({
-            text: 'Scanning',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this._indicatorContent.add_child(this._icon);
-        this._indicatorContent.add_child(this._statusLabel);
-        this._indicator.add_child(this._indicatorContent);
+        this._indicator.add_child(this._icon);
         this._indicator.accessible_name = this.metadata.name;
-        this._buttonSignal = this._indicator.connect('button-press-event', (_actor, event) => {
-            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
-                return Clutter.EVENT_PROPAGATE;
-            this._openSelected();
-            return Clutter.EVENT_STOP;
-        });
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._mpvMonitor = new MpvIpcMonitor(state => {
@@ -87,8 +73,6 @@ export default class YouTubeToMpvExtension extends Extension {
         this._mpvMonitor?.destroy();
         this._clipboardHistory?.destroy();
         if (this._indicator) {
-            if (this._buttonSignal)
-                this._indicator.disconnect(this._buttonSignal);
             if (this._menuSignal)
                 this._indicator.menu.disconnect(this._menuSignal);
             this._indicator.menu.removeAll();
@@ -98,15 +82,12 @@ export default class YouTubeToMpvExtension extends Extension {
         this._mpvMonitor = null;
         this._clipboardHistory = null;
         this._indicator = null;
-        this._indicatorContent = null;
         this._icon = null;
-        this._statusLabel = null;
         this._statusItem = null;
         this._clipboard = null;
         this._videos = [];
         this._clipboardItems = [];
         this._selectedVideo = null;
-        this._buttonSignal = 0;
         this._menuSignal = 0;
     }
 
@@ -161,7 +142,8 @@ export default class YouTubeToMpvExtension extends Extension {
 
         this._addHeading('Recent Clipboard URLs');
         if (this._clipboardItems.length === 0) {
-            const history = new PopupMenu.PopupMenuItem('No recent URLs in cliphist');
+            const history = new PopupMenu.PopupMenuItem(
+                'No recent Isle clipboard URLs available');
             history.setSensitive(false);
             this._indicator.menu.addMenuItem(history);
         } else {
@@ -209,11 +191,6 @@ export default class YouTubeToMpvExtension extends Extension {
         this._monitor.refresh(selected.busName, refreshed => {
             onSelected(refreshed?.url === selected.url ? refreshed : selected);
         });
-    }
-
-    _openSelected() {
-        this._withSelectedVideo(video => this._playVideo(video),
-            () => this._openClipboard(video => this._playVideo(video)));
     }
 
     _playVideo(video, options = {}) {
@@ -301,47 +278,20 @@ export default class YouTubeToMpvExtension extends Extension {
         return `${count} item${count === 1 ? '' : 's'} ready`;
     }
 
-    _panelText() {
-        const state = this._state();
-        if (state === 'searching')
-            return 'Scanning';
-        if (state === 'empty')
-            return 'No media';
-        if (state === 'loading')
-            return 'Loading';
-        if (state === 'playing' || state === 'browser-playing')
-            return 'Playing';
-        if (state === 'paused')
-            return 'Paused';
-        const count = this._videos.filter(video => video.current).length;
-        return `${count} item${count === 1 ? '' : 's'}`;
-    }
-
     _updateUi() {
         if (!this._indicator)
             return;
         const state = this._state();
         const icons = {
             searching: 'view-refresh-symbolic',
-            empty: 'media-playback-stop-symbolic',
+            empty: 'video-x-generic-symbolic',
             ready: 'media-playback-start-symbolic',
             'browser-playing': 'media-playback-start-symbolic',
             loading: 'view-refresh-symbolic',
             playing: 'media-playback-start-symbolic',
             paused: 'media-playback-pause-symbolic',
         };
-        const colors = {
-            ready: '#e6a700',
-            'browser-playing': '#4caf50',
-            loading: '#e6a700',
-            playing: '#4caf50',
-            paused: '#8a8a8a',
-        };
-        const style = colors[state] ? `color: ${colors[state]};` : null;
         this._icon.icon_name = icons[state];
-        this._icon.set_style(style);
-        this._statusLabel.set_text(this._panelText());
-        this._statusLabel.set_style(style);
         this._indicator.accessible_name = `${this.metadata.name}: ${this._statusText()}`;
 
         const signature = JSON.stringify({
