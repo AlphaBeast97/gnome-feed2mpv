@@ -1,0 +1,33 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gjs-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install GJS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gjs gir1.2-soup-3.0
+
+      - name: Validate extension metadata
+        run: python3 -m json.tool metadata.json >/dev/null
+
+      - name: Run GJS checks
+        run: |
+          gjs -m tests/mpris.js
+          gjs -m tests/mpv-ipc.js
+          gjs -m tests/clipboard-history.js
+          gjs -m tests/menu-utils.js

@@ -1,5 +1,7 @@
 # YouTube to MPV
 
+[![Checks](https://github.com/alphabeast97/youtube-to-mpv/actions/workflows/checks.yml/badge.svg)](https://github.com/alphabeast97/youtube-to-mpv/actions/workflows/checks.yml)
+
 A GNOME Shell extension for finding browser media and opening it in MPV. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
 ## What it does
@@ -10,6 +12,7 @@ A GNOME Shell extension for finding browser media and opening it in MPV. The pan
 - Keeps up to five copied HTTP(S) URLs in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL. It neither changes the clipboard nor depends on a particular clipboard manager.
 - Can read existing recent URL entries from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
 - Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
+- Shortens menu titles to 48 characters so long video names do not make the popup excessively wide. The full title and URL remain available in the row tooltip.
 
 Only URLs are kept by the session tracker, in memory, and the list resets when the extension is disabled or GNOME Shell restarts. The optional history service can provide links copied before the extension was enabled. The extension does not read or import the private databases of individual clipboard manager applications, so it does not need separate integrations for each one.
 
@@ -112,7 +115,10 @@ Run the focused checks with GJS:
 gjs -m tests/mpris.js
 gjs -m tests/mpv-ipc.js
 gjs -m tests/clipboard-history.js
+gjs -m tests/menu-utils.js
 ```
+
+GitHub Actions runs these checks and validates `metadata.json` on pushes, pull requests, and version tags.
 
 Before release, package and install on each GNOME Shell version listed in `metadata.json`, then check enable/disable cleanup, the icon and menu, MPRIS discovery, copied-link tracking, title lookup, and MPV controls. Browser behavior should be checked against the exact browser builds being advertised because MPRIS metadata differs by browser and build.
 
