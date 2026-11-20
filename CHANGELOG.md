@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Rename the project and extension to GNOME Feed2MPV.
+- Change the extension UUID to `gnome-feed2mpv@alphabeast97.github.io`. Existing installs under the old UUID must be disabled or removed, then the renamed extension installed and enabled.
+- Clarify that browser media detection and copied-link playback are general; YouTube is used only for optional artwork URL recovery and exact-link title lookup.
+
 ## 1.0.1
 
 - Keep long menu titles visually concise while preserving full accessible names.

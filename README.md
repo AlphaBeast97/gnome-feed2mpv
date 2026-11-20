@@ -1,6 +1,6 @@
-# YouTube to MPV
+# GNOME Feed2MPV
 
-[![Checks](https://github.com/alphabeast97/youtube-to-mpv/actions/workflows/checks.yml/badge.svg)](https://github.com/alphabeast97/youtube-to-mpv/actions/workflows/checks.yml)
+[![Checks](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml/badge.svg)](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml)
 
 A GNOME Shell extension for finding browser media and opening it in MPV. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
@@ -73,8 +73,8 @@ gnome-extensions pack . --extra-source=src
 Install the generated ZIP with the GNOME Extensions app or the command line:
 
 ```sh
-gnome-extensions install youtube-to-mpv@alphabeast97.github.io.shell-extension.zip
-gnome-extensions enable youtube-to-mpv@alphabeast97.github.io
+gnome-extensions install gnome-feed2mpv@alphabeast97.github.io.shell-extension.zip
+gnome-extensions enable gnome-feed2mpv@alphabeast97.github.io
 ```
 
 Use the actual ZIP filename printed by `gnome-extensions pack`. Depending on the GNOME Shell version, a logout and login may be needed before the updated extension is loaded.

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability privately
-    url: https://github.com/AlphaBeast97/youtube-to-mpv/security/advisories/new
+    url: https://github.com/AlphaBeast97/gnome-feed2mpv/security/advisories/new
     about: Do not report security issues in public issues.

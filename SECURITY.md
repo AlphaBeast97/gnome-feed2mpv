@@ -6,7 +6,7 @@ Security reports are welcome for the latest release. The extension metadata curr
 
 ## Reporting a vulnerability
 
-Please use [GitHub's private vulnerability reporting form](https://github.com/AlphaBeast97/youtube-to-mpv/security/advisories/new). Private reporting is enabled for this repository. Do not report suspected vulnerabilities in public issues or pull requests.
+Please use [GitHub's private vulnerability reporting form](https://github.com/AlphaBeast97/gnome-feed2mpv/security/advisories/new). Private reporting is enabled for this repository. Do not report suspected vulnerabilities in public issues or pull requests.
 
 Include the affected release or commit, the impact, steps to reproduce, and any proof of concept needed to understand the issue. Avoid including real account credentials or private media URLs.
 
