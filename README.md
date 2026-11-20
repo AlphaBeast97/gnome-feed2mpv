@@ -6,7 +6,7 @@ A GNOME Shell extension for finding browser media and opening it in MPV. The pan
 
 ## Why use MPV?
 
-This extension is for people who prefer MPV as their playback app and want to hand a browser video to it without hunting for the URL. MPV can use your existing playback configuration, keyboard controls, scripts, and site support through `yt-dlp`; this extension adds browser selection, queueing, and audio-only controls from the Shell menu. If you already prefer watching everything in your browser, the extension may not add much for you.
+This extension is for people who already prefer MPV and want browser videos to open there without hunting for and pasting URLs. MPV keeps your playback configuration, key bindings, and scripts; with `yt-dlp`, it can also play many streaming sites. The extension chooses among browser sessions, pauses the browser copy, carries over the reported position, and adds queue and audio-only controls. If you already prefer watching everything in your browser, you may not need it.
 
 ## What it does
 
