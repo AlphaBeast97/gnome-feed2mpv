@@ -1,3 +1,4 @@
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -38,6 +39,10 @@ export default class Feed2MpvExtension extends Extension {
         this._scanComplete = false;
         this._mpvState = 'idle';
         this._mpvTitle = null;
+        this._playbackStarted = false;
+        this._loadErrorTimer = 0;
+        this._pendingPlaybackError = '';
+        this._lastPlaybackErrorAt = 0;
         this._menuSignature = '';
         this._clipboard = St.Clipboard.get_default();
         this._videoTitleResolver = new VideoTitleResolver();
@@ -60,10 +65,10 @@ export default class Feed2MpvExtension extends Extension {
 
         this._mpvMonitor = new MpvIpcMonitor(state => {
             this._mpvState = state;
-            if (state === 'idle')
-                this._mpvTitle = null;
+            if (state === 'playing')
+                this._playbackStarted = true;
             this._updateUi();
-        });
+        }, (detail, source) => this._handleMpvPlaybackError(detail, source));
         this._monitor = new MprisMonitor(
             videos => this._onVideosChanged(videos),
             () => {
@@ -89,6 +94,7 @@ export default class Feed2MpvExtension extends Extension {
 
     disable() {
         this._destroyed = true;
+        this._clearPlaybackErrorTimer();
         this._monitor?.destroy();
         this._mpvMonitor?.destroy();
         this._clipboardHistory?.destroy();
@@ -117,6 +123,8 @@ export default class Feed2MpvExtension extends Extension {
         this._menuOpen = false;
         this._menuDirty = false;
         this._menuSignature = '';
+        this._playbackStarted = false;
+        this._lastPlaybackErrorAt = 0;
     }
 
     _notifyIfLegacyInstalled() {
@@ -239,9 +247,12 @@ export default class Feed2MpvExtension extends Extension {
     _playVideo(video, options = {}) {
         if (this._destroyed || !this._mpvMonitor)
             return;
+        this._clearPlaybackErrorTimer();
+        this._lastPlaybackErrorAt = 0;
+        this._playbackStarted = false;
         this._mpvTitle = video.title;
         this._mpvMonitor.expectLoad();
-        if (!openInMpv(video, options)) {
+        if (!openInMpv(video, options, detail => this._onMpvLaunchFailure(detail))) {
             this._mpvMonitor.cancelLoad();
             this._mpvTitle = null;
             Main.notify(this.metadata.name, 'Could not start MPV. Make sure mpv is installed and available on PATH.');
@@ -251,9 +262,65 @@ export default class Feed2MpvExtension extends Extension {
     _queueVideo(video) {
         if (this._destroyed || !this._mpvMonitor)
             return;
+        this._clearPlaybackErrorTimer();
+        this._lastPlaybackErrorAt = 0;
         this._mpvTitle = video.title;
-        this._mpvMonitor.expectLoad();
+        this._mpvMonitor.expectLoad('queue');
         queueInMpv(video, () => this._playVideo(video));
+    }
+
+    _handleMpvPlaybackError(detail, source) {
+        if (this._destroyed)
+            return;
+        if (source !== 'launch' || this._playbackStarted) {
+            this._notifyPlaybackError(detail);
+            return;
+        }
+        if (this._lastPlaybackErrorAt)
+            return;
+        this._schedulePlaybackError(detail);
+    }
+
+    _onMpvLaunchFailure(detail) {
+        if (this._destroyed)
+            return;
+        this._clearPlaybackErrorTimer();
+        if (this._playbackStarted)
+            return;
+        this._notifyPlaybackError(detail);
+    }
+
+    _schedulePlaybackError(detail) {
+        this._clearPlaybackErrorTimer();
+        this._pendingPlaybackError = detail;
+        this._loadErrorTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+            this._loadErrorTimer = 0;
+            this._notifyPlaybackError(this._pendingPlaybackError);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _clearPlaybackErrorTimer() {
+        if (this._loadErrorTimer)
+            GLib.Source.remove(this._loadErrorTimer);
+        this._loadErrorTimer = 0;
+        this._pendingPlaybackError = '';
+    }
+
+    _notifyPlaybackError(detail) {
+        if (this._destroyed)
+            return;
+        this._lastPlaybackErrorAt = GLib.get_monotonic_time();
+        const title = this._mpvTitle && this._mpvTitle !== 'Clipboard video'
+            ? menuTitle(this._mpvTitle)
+            : 'this link';
+        this._mpvTitle = null;
+        this._mpvMonitor?.cancelLoad();
+        this._updateUi();
+        const reason = detail && detail !== 'loading failed'
+            ? detail
+            : 'the site may block playback, the link may be broken, or yt-dlp may not support it';
+        Main.notify(this.metadata.name, `MPV could not play ${title}: ${reason}`);
     }
 
     _openClipboard(onVideo) {

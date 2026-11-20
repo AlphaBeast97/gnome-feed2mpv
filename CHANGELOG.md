@@ -9,10 +9,11 @@
 - Watch the MPV socket directory instead of retrying the connection every second, and move the socket to `$XDG_RUNTIME_DIR/mpvsocket`.
 - Remove non-functional row tooltips; full titles remain in each row's accessible name.
 - Declare clipboard reading and the YouTube title request in the extension description.
-- Follow the Shell theme instead of setting hardcoded icon colors, and silence MPV's inherited standard output.
+- Follow the Shell theme instead of setting hardcoded icon colors, and capture MPV's output instead of inheriting it.
 - Package `LICENSE` with the extension and remove a duplicated CI check.
 - Remove the pre-rename `youtube-to-mpv@alphabeast97.github.io` install in the new install script, and warn when it is still present, so both builds cannot run as two panel icons.
 - List only copied links that point at media files or recognized streaming sites, so ordinary web links stay out of the clipboard history.
+- Show MPV's own error in a notification when a launched or queued link cannot be played, instead of failing without feedback.
 
 ## 1.0.2
 

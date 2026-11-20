@@ -11,8 +11,10 @@ export const MPV_SOCKET = GLib.build_filenamev([
 ]);
 
 export class MpvIpcMonitor {
-    constructor(onStateChanged) {
+    constructor(onStateChanged, onPlaybackError = null) {
         this._onStateChanged = onStateChanged;
+        this._onPlaybackError = onPlaybackError;
+        this._loadSource = null;
         this._cancellable = new Gio.Cancellable();
         this._connection = null;
         this._connecting = false;
@@ -37,9 +39,10 @@ export class MpvIpcMonitor {
         return this._state;
     }
 
-    expectLoad() {
+    expectLoad(source = 'launch') {
         if (this._destroyed)
             return;
+        this._loadSource = source;
         this._retryAttempts = 0;
         if (this._state !== 'playing' && this._state !== 'paused')
             this._setState('loading');
@@ -82,7 +85,9 @@ export class MpvIpcMonitor {
         this._connection?.close(null);
         this._connection = null;
         this._input = null;
+        this._loadSource = null;
         this._onStateChanged = null;
+        this._onPlaybackError = null;
     }
 
     _connect() {
@@ -186,6 +191,9 @@ export class MpvIpcMonitor {
         }
         if (message.event === 'end-file') {
             this._clearLoadTimeout();
+            if (message.reason === 'error')
+                this._onPlaybackError?.(message.file_error ?? 'loading failed', this._loadSource);
+            this._loadSource = null;
             this._idle = true;
             this._setState('idle');
             return;
