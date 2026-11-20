@@ -4,6 +4,8 @@ import Soup from 'gi://Soup?version=3.0';
 
 import {youtubeVideoId} from './clipboard-utils.js';
 
+const FAILURE_TTL_SECONDS = 600;
+
 export function parseOEmbedTitle(body) {
     try {
         const response = JSON.parse(body);
@@ -20,6 +22,7 @@ export class VideoTitleResolver {
         this._session = new Soup.Session();
         this._session.timeout = 8;
         this._cache = new Map();
+        this._failures = new Map();
         this._pending = new Map();
         this._destroyed = false;
     }
@@ -30,6 +33,11 @@ export class VideoTitleResolver {
             return;
         if (this._cache.has(id)) {
             callback(this._cache.get(id));
+            return;
+        }
+        const failedAt = this._failures.get(id);
+        if (failedAt && Date.now() - failedAt < FAILURE_TTL_SECONDS * 1000) {
+            callback(null);
             return;
         }
         if (this._pending.has(id)) {
@@ -62,6 +70,8 @@ export class VideoTitleResolver {
                     return;
                 if (title)
                     this._cache.set(id, title);
+                else
+                    this._failures.set(id, Date.now());
                 for (const done of current.callbacks)
                     done(title);
             });
@@ -73,6 +83,7 @@ export class VideoTitleResolver {
             cancellable.cancel();
         this._pending.clear();
         this._cache.clear();
+        this._failures.clear();
         this._session.abort();
         this._session = null;
     }
