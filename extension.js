@@ -9,7 +9,6 @@ import {ClipboardHistory} from './src/clipboard-history.js';
 import {MprisMonitor} from './src/mpris.js';
 import {MpvIpcMonitor} from './src/mpv-ipc.js';
 import {openInMpv, queueInMpv, readClipboardUrl} from './src/player.js';
-import {StreamabilityChecker} from './src/streamability-checker.js';
 import {VideoTitleResolver} from './src/video-title.js';
 import {menuTitle} from './src/menu-utils.js';
 
@@ -31,23 +30,17 @@ export default class YouTubeToMpvExtension extends Extension {
         this._videos = [];
         this._selectedVideo = null;
         this._clipboardItems = [];
-        this._clipboardStreamability = new Map();
-        this._menuOpen = false;
         this._scanComplete = false;
         this._mpvState = 'idle';
         this._mpvTitle = null;
         this._menuSignature = '';
         this._clipboard = St.Clipboard.get_default();
         this._videoTitleResolver = new VideoTitleResolver();
-        this._streamabilityChecker = new StreamabilityChecker();
         this._clipboardHistory = new ClipboardHistory(
             this._clipboard,
             videos => {
                 this._clipboardItems = videos;
-                this._pruneClipboardStreamability(videos);
                 this._enrichClipboardTitles();
-                if (this._menuOpen)
-                    this._checkClipboardStreamability(videos);
                 this._updateUi();
             });
         this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
@@ -72,15 +65,8 @@ export default class YouTubeToMpvExtension extends Extension {
                 this._updateUi();
             });
         this._menuSignal = this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
-            this._menuOpen = isOpen;
-            if (isOpen) {
-                for (const [url, status] of this._clipboardStreamability) {
-                    if (status !== 'checking')
-                        this._clipboardStreamability.delete(url);
-                }
-                this._checkClipboardStreamability(this._clipboardItems);
+            if (isOpen)
                 this._refreshClipboardHistory();
-            }
         });
 
         this._buildMenu();
@@ -94,7 +80,6 @@ export default class YouTubeToMpvExtension extends Extension {
         this._mpvMonitor?.destroy();
         this._clipboardHistory?.destroy();
         this._videoTitleResolver?.destroy();
-        this._streamabilityChecker?.destroy();
         if (this._indicator) {
             if (this._menuSignal)
                 this._indicator.menu.disconnect(this._menuSignal);
@@ -105,17 +90,14 @@ export default class YouTubeToMpvExtension extends Extension {
         this._mpvMonitor = null;
         this._clipboardHistory = null;
         this._videoTitleResolver = null;
-        this._streamabilityChecker = null;
         this._indicator = null;
         this._icon = null;
         this._statusItem = null;
         this._clipboard = null;
         this._videos = [];
         this._clipboardItems = [];
-        this._clipboardStreamability.clear();
         this._selectedVideo = null;
         this._menuSignal = 0;
-        this._menuOpen = false;
     }
 
     _buildMenu() {
@@ -168,32 +150,19 @@ export default class YouTubeToMpvExtension extends Extension {
         }
 
         this._addHeading('Recent Clipboard URLs');
-        const streamableClipboardItems = this._clipboardItems.filter(video =>
-            this._clipboardStreamability.get(video.url) === 'streamable');
-        const checkingClipboardItems = this._clipboardItems.some(video =>
-            this._clipboardStreamability.get(video.url) === 'checking');
-        if (streamableClipboardItems.length === 0) {
+        if (this._clipboardItems.length === 0) {
             const history = new PopupMenu.PopupMenuItem(
-                checkingClipboardItems
-                    ? 'Checking copied links…'
-                    : this._clipboardItems.length === 0
-                        ? 'No recent copied links'
-                        : 'No streamable copied links detected');
+                'No recent copied video links');
             history.setSensitive(false);
             this._indicator.menu.addMenuItem(history);
         } else {
-            for (const video of streamableClipboardItems) {
+            for (const video of this._clipboardItems) {
                 const item = new PopupMenu.PopupMenuItem(
                     `${menuTitle(video.title)}  ·  Clipboard history`);
                 item.accessible_name = `${video.title}, clipboard history`;
                 item.tooltip_text = `${video.title}\n${video.url}`;
                 item.connect('activate', () => this._playVideo(video));
                 this._indicator.menu.addMenuItem(item);
-            }
-            if (checkingClipboardItems) {
-                const checking = new PopupMenu.PopupMenuItem('Checking more copied links…');
-                checking.setSensitive(false);
-                this._indicator.menu.addMenuItem(checking);
             }
         }
     }
@@ -269,39 +238,9 @@ export default class YouTubeToMpvExtension extends Extension {
     _refreshClipboardHistory() {
         this._clipboardHistory.refresh(videos => {
             this._clipboardItems = videos;
-            this._pruneClipboardStreamability(videos);
             this._enrichClipboardTitles(true);
-            this._checkClipboardStreamability(videos);
             this._updateUi();
         });
-    }
-
-    _pruneClipboardStreamability(videos) {
-        const currentUrls = new Set(videos.map(video => video.url));
-        for (const url of this._clipboardStreamability.keys()) {
-            if (!currentUrls.has(url))
-                this._clipboardStreamability.delete(url);
-        }
-    }
-
-    _checkClipboardStreamability(videos) {
-        if (!this._streamabilityChecker || !this._menuOpen)
-            return;
-
-        for (const video of videos) {
-            if (this._clipboardStreamability.has(video.url))
-                continue;
-
-            this._clipboardStreamability.set(video.url, 'checking');
-            this._streamabilityChecker.check(video.url, streamable => {
-                if (!this._clipboardItems.some(item => item.url === video.url))
-                    return;
-                this._clipboardStreamability.set(
-                    video.url, streamable ? 'streamable' : 'unsupported');
-                this._updateUi();
-            });
-        }
-        this._updateUi();
     }
 
     _onVideosChanged(videos) {
@@ -406,11 +345,7 @@ export default class YouTubeToMpvExtension extends Extension {
             state,
             selected: this._videoKey(this._selectedVideo),
             videos: this._videos.map(video => [video.busName, video.url, video.title, video.status]),
-            clipboardItems: this._clipboardItems.map(video => [
-                video.url,
-                video.title,
-                this._clipboardStreamability.get(video.url) ?? 'unchecked',
-            ]),
+            clipboardItems: this._clipboardItems.map(video => [video.url, video.title]),
         });
         if (signature !== this._menuSignature) {
             this._menuSignature = signature;
