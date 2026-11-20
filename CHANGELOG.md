@@ -1,8 +1,7 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
-- Explain that the GNOME Shell extension launches MPV directly and does not need a separate browser helper.
 - Guard asynchronous MPV and clipboard callbacks so nothing runs after the extension is disabled.
 - Read the history service's `at` timestamp so imported links keep their recency order, and add a GJS check for it.
 - Defer menu rebuilds while the popup is open so keyboard focus and scroll position are kept.
@@ -14,6 +13,10 @@
 - Remove the pre-rename `youtube-to-mpv@alphabeast97.github.io` install in the new install script, and warn when it is still present, so both builds cannot run as two panel icons.
 - List only copied links that point at media files or recognized streaming sites, so ordinary web links stay out of the clipboard history.
 - Show MPV's own error in a notification when a launched or queued link cannot be played, instead of failing without feedback.
+
+## 1.0.3
+
+- Explain that the GNOME Shell extension launches MPV directly and does not need a separate browser helper.
 
 ## 1.0.2
 

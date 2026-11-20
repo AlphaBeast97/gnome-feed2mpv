@@ -17,7 +17,7 @@ This extension is for people who already use MPV and want web media in the same 
 - Detects media sessions published on MPRIS and lists the current and recently seen media.
 - Opens a selected URL in MPV, optionally starts audio-only playback, or queues a URL in an existing MPV process.
 - Shows MPV loading, playing, paused, and stopped controls in the extension menu.
-- Reports MPV's own error in a desktop notification when it cannot play a link, instead of stopping silently, for both launched and queued playback.
+- Reports a desktop notification when MPV cannot play a link instead of stopping silently, with MPV's own error message when the extension launches it.
 - Keeps up to five copied media links in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL, then keeps links that point at media: a direct audio or video file, an HLS/DASH manifest, or a page on a recognized streaming site. Other links are dropped without contacting the site. It neither changes the clipboard nor depends on a particular clipboard manager.
 - Can read existing recent media links from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
 - Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
@@ -117,7 +117,7 @@ The menu uses a title from a matching MPRIS session when one exists. Otherwise, 
 
 Confirm that `mpv` is available on `PATH`. For YouTube and many streaming sites, confirm that MPV can find a current `yt-dlp` executable. Try the URL directly in MPV to distinguish a detection issue from a site or extractor issue.
 
-When MPV exits with an error, the extension shows a notification containing MPV's own message, such as `Unsupported URL`, `Video unavailable`, or `Cannot open file`. A queued link that fails also produces a notification, but MPV exposes only a short reason over IPC; the detailed message appears when the extension launches MPV itself.
+When an MPV launch fails, the extension shows a notification containing MPV's own message, such as `Unsupported URL`, `Video unavailable`, or `Cannot open file`. A queued link that fails also produces a notification, but MPV exposes only a short reason over IPC; the detailed message appears when the extension launches MPV itself.
 
 ## Project layout
 
