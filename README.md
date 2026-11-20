@@ -12,13 +12,15 @@ Firefox and Zen can expose the page URL through `xesam:url`. Chromium based brow
 
 ## Use
 
-The panel menu lists detected media by title and browser, so choose the item you want to watch. Selecting an item opens it in MPV, pauses that browser session if it is playing, and starts at the reported playback position. The menu status and panel tooltip show when media is being scanned, nothing is detected, MPV is loading, or MPV is playing or paused. Queue, audio only, and explicit clipboard actions are also available. Queueing uses MPV's IPC socket at `/tmp/mpvsocket`; when no socket is available, the extension starts MPV with the selected video.
+The panel menu lists currently detected media by title and browser, plus up to five recently seen media URLs per browser MPRIS player. Selecting an item opens it in MPV, pauses that browser session if it is playing, and starts at the reported playback position. The menu status and panel label show when media is being scanned, nothing is detected, MPV is loading, or MPV is playing or paused. Audio-only playback has pause, resume, and stop controls in the same menu. Queueing uses MPV's IPC socket at `/tmp/mpvsocket`; when no socket is available, the extension starts MPV with the selected video.
+
+If `cliphist` is installed and configured, the menu also lists up to five recent HTTP(S) clipboard-history entries. The extension searches a bounded window of recent entries and reads them with `cliphist list` and `cliphist decode`; it does not write to or take ownership of the clipboard. Without `cliphist`, this section stays empty and the current clipboard action remains available. A browser only appears when it publishes a media session over MPRIS. If Brave does not publish one, the extension cannot enumerate its tabs through MPRIS.
 
 The extension does not set `ytdl-format` or other playback preferences. MPV reads the user's existing configuration normally.
 
 ## Install from a local checkout
 
-Run `gnome-extensions pack . --extra-source=mpris.js --extra-source=player.js --extra-source=mpv-ipc.js` in this directory, then install the resulting ZIP with GNOME Extensions or `gnome-extensions install`. Enable the extension from the Extensions app or with:
+Run `gnome-extensions pack . --extra-source=mpris.js --extra-source=player.js --extra-source=mpv-ipc.js --extra-source=clipboard-history.js` in this directory, then install the resulting ZIP with GNOME Extensions or `gnome-extensions install`. Enable the extension from the Extensions app or with:
 
 ```sh
 gnome-extensions enable youtube-to-mpv@alphabeast97.github.io
@@ -26,4 +28,4 @@ gnome-extensions enable youtube-to-mpv@alphabeast97.github.io
 
 ## Development
 
-The entry point and menu live in `extension.js`. Browser media discovery and URL parsing live in `mpris.js`; MPV launching and clipboard handling live in `player.js`; MPV IPC playback state is managed in `mpv-ipc.js`. Run the checks with `gjs -m tests/mpris.js` and `gjs -m tests/mpv-ipc.js`.
+The entry point and menu live in `extension.js`. Browser media discovery and URL parsing live in `mpris.js`; MPV launching and current clipboard handling live in `player.js`; clipboard history is read through `clipboard-history.js`; MPV IPC playback state and controls live in `mpv-ipc.js`. Run the checks with `gjs -m tests/mpris.js`, `gjs -m tests/mpv-ipc.js`, and `gjs -m tests/clipboard-history.js`.
