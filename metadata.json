@@ -1,0 +1,6 @@
+{
+  "uuid": "youtube-to-mpv@alphabeast97.github.io",
+  "name": "YouTube to MPV",
+  "description": "Open browser media URLs in MPV using yt-dlp where supported.",
+  "shell-version": ["46", "47", "48", "49", "50", "51"]
+}
