@@ -4,6 +4,8 @@ import GLib from 'gi://GLib';
 const MPRIS_PREFIX = 'org.mpris.MediaPlayer2.';
 const MPRIS_PLAYER_INTERFACE = 'org.mpris.MediaPlayer2.Player';
 const OBJECT_PATH = '/org/mpris/MediaPlayer2';
+const MAX_RECENT_PER_PLAYER = 5;
+const MAX_RECENT_TOTAL = 20;
 
 function unwrap(value) {
     while (value instanceof GLib.Variant)
@@ -78,7 +80,7 @@ function mediaUrl(value) {
 function youtubeUrlFromArtwork(value) {
     if (typeof value !== 'string')
         return null;
-    const match = value.match(/(?:^|\/)vi\/([\w-]{11})\//);
+    const match = value.match(/(?:^|\/)vi(?:_webp)?\/([\w-]{11})(?:\/|$)/);
     return match ? `https://www.youtube.com/watch?v=${match[1]}` : null;
 }
 
@@ -93,6 +95,7 @@ export class MprisMonitor {
         this._cancellable = new Gio.Cancellable();
         this._subscriptions = [];
         this._players = new Map();
+        this._recent = new Map();
         this._busNames = new Set();
         this._owners = new Map();
         this._destroyed = false;
@@ -117,6 +120,7 @@ export class MprisMonitor {
                 } else {
                     this._busNames.delete(name);
                     this._players.delete(name);
+                    this._markInactive(name);
                 }
                 this._publishVideos();
             }));
@@ -141,6 +145,7 @@ export class MprisMonitor {
             Gio.DBus.session.signal_unsubscribe(id);
         this._subscriptions = [];
         this._players.clear();
+        this._recent.clear();
         this._busNames.clear();
         this._owners.clear();
         this._onVideosChanged = null;
@@ -217,13 +222,17 @@ export class MprisMonitor {
                 try {
                     const [properties] = connection.call_finish(result).deepUnpack();
                     const video = parseMprisProperties(properties, busName);
-                    if (video)
+                    if (video) {
                         this._players.set(busName, video);
-                    else
+                        this._remember(video);
+                    } else {
                         this._players.delete(busName);
+                        this._markInactive(busName);
+                    }
                     callback?.(video);
                 } catch (_) {
                     this._players.delete(busName);
+                    this._markInactive(busName);
                     callback?.(null);
                 }
                 this._publishVideos();
@@ -233,9 +242,35 @@ export class MprisMonitor {
     _publishVideos() {
         if (this._destroyed)
             return;
-        const videos = [...this._players.values()];
-        videos.sort((a, b) => Number(b.status === 'Playing') - Number(a.status === 'Playing'));
+        const videos = [...this._recent.values()];
+        videos.sort((a, b) => Number(b.current && b.status === 'Playing') - Number(a.current && a.status === 'Playing')
+            || Number(b.current) - Number(a.current));
         this._onVideosChanged?.(videos);
+    }
+
+    _remember(video) {
+        const key = `${video.busName}\n${video.url}`;
+        for (const [entryKey, entry] of this._recent) {
+            if (entry.busName === video.busName)
+                this._recent.set(entryKey, {...entry, current: false, status: 'Previous'});
+        }
+        this._recent.delete(key);
+        this._recent.set(key, {...video, current: true});
+
+        const playerEntries = [...this._recent]
+            .filter(([, entry]) => entry.busName === video.busName)
+            .map(([entryKey]) => entryKey);
+        while (playerEntries.length > MAX_RECENT_PER_PLAYER)
+            this._recent.delete(playerEntries.shift());
+        while (this._recent.size > MAX_RECENT_TOTAL)
+            this._recent.delete(this._recent.keys().next().value);
+    }
+
+    _markInactive(busName) {
+        for (const [key, entry] of this._recent) {
+            if (entry.busName === busName)
+                this._recent.set(key, {...entry, current: false, status: 'Previous'});
+        }
     }
 }
 

@@ -47,6 +47,14 @@ export class MpvIpcMonitor {
             this._setState('idle');
     }
 
+    togglePause() {
+        this._sendPlayerCommand(['cycle', 'pause']);
+    }
+
+    stopPlayback() {
+        this._sendPlayerCommand(['stop']);
+    }
+
     destroy() {
         if (this._destroyed)
             return;
@@ -98,6 +106,36 @@ export class MpvIpcMonitor {
                     this._disconnect();
                 }
             });
+    }
+
+    _sendPlayerCommand(command) {
+        const write = (connection, closeWhenDone = false) => {
+            const bytes = new TextEncoder().encode(`${JSON.stringify({command})}\n`);
+            connection.get_output_stream().write_all_async(
+                bytes, GLib.PRIORITY_DEFAULT, this._cancellable, (stream, result) => {
+                    try {
+                        stream.write_all_finish(result);
+                    } catch (_) {
+                    }
+                    if (closeWhenDone)
+                        connection.close(null);
+                });
+        };
+
+        if (this._connection) {
+            write(this._connection);
+            return;
+        }
+
+        const client = new Gio.SocketClient();
+        const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
+        client.connect_async(address, this._cancellable, (socketClient, result) => {
+            try {
+                const connection = socketClient.connect_finish(result);
+                write(connection, true);
+            } catch (_) {
+            }
+        });
     }
 
     _readNextLine() {
