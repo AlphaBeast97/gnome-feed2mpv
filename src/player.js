@@ -3,12 +3,12 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import {mediaUrl} from './mpris.js';
-
-const MPV_SOCKET = '/tmp/mpvsocket';
+import {MPV_SOCKET} from './mpv-ipc.js';
 
 function launch(args) {
     try {
-        const process = Gio.Subprocess.new(args, Gio.SubprocessFlags.NONE);
+        const process = Gio.Subprocess.new(args,
+            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE);
         process.wait_async(null, (subprocess, result) => {
             try {
                 subprocess.wait_finish(result);

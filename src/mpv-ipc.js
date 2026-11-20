@@ -1,18 +1,27 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
-const MPV_SOCKET = '/tmp/mpvsocket';
 const RETRY_SECONDS = 1;
+const MAX_RETRIES = 3;
 const LOAD_TIMEOUT_SECONDS = 30;
+
+export const MPV_SOCKET = GLib.build_filenamev([
+    GLib.get_user_runtime_dir() || GLib.get_tmp_dir(),
+    'mpvsocket',
+]);
 
 export class MpvIpcMonitor {
     constructor(onStateChanged) {
         this._onStateChanged = onStateChanged;
         this._cancellable = new Gio.Cancellable();
         this._connection = null;
+        this._connecting = false;
         this._input = null;
         this._retrySource = 0;
+        this._retryAttempts = 0;
         this._loadTimeout = 0;
+        this._socketMonitor = null;
+        this._socketMonitorSignal = 0;
         this._state = 'idle';
         this._idle = null;
         this._paused = null;
@@ -20,6 +29,7 @@ export class MpvIpcMonitor {
     }
 
     start() {
+        this._watchSocketDirectory();
         this._connect();
     }
 
@@ -28,6 +38,9 @@ export class MpvIpcMonitor {
     }
 
     expectLoad() {
+        if (this._destroyed)
+            return;
+        this._retryAttempts = 0;
         if (this._state !== 'playing' && this._state !== 'paused')
             this._setState('loading');
         if (this._loadTimeout)
@@ -62,6 +75,9 @@ export class MpvIpcMonitor {
         this._cancellable.cancel();
         if (this._retrySource)
             GLib.Source.remove(this._retrySource);
+        this._retrySource = 0;
+        this._connecting = false;
+        this._stopWatchingSocketDirectory();
         this._clearLoadTimeout();
         this._connection?.close(null);
         this._connection = null;
@@ -70,11 +86,13 @@ export class MpvIpcMonitor {
     }
 
     _connect() {
-        if (this._destroyed || this._connection)
+        if (this._destroyed || this._connection || this._connecting)
             return;
+        this._connecting = true;
         const client = new Gio.SocketClient();
         const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
         client.connect_async(address, this._cancellable, (socketClient, result) => {
+            this._connecting = false;
             if (this._destroyed)
                 return;
             try {
@@ -83,11 +101,11 @@ export class MpvIpcMonitor {
                 this._scheduleRetry();
                 return;
             }
+            this._retryAttempts = 0;
             this._input = Gio.DataInputStream.new(this._connection.get_input_stream());
             this._sendCommands([
                 ['observe_property', 1, 'idle-active'],
                 ['observe_property', 2, 'pause'],
-                ['observe_property', 3, 'media-title'],
             ]);
             this._readNextLine();
         });
@@ -203,14 +221,44 @@ export class MpvIpcMonitor {
         this._input = null;
         this._idle = null;
         this._paused = null;
+        this._retryAttempts = 0;
         if (this._state === 'playing' || this._state === 'paused')
             this._setState('idle');
         this._scheduleRetry();
     }
 
-    _scheduleRetry() {
-        if (this._destroyed || this._retrySource)
+    _watchSocketDirectory() {
+        const socketFile = Gio.File.new_for_path(MPV_SOCKET);
+        try {
+            this._socketMonitor = socketFile.get_parent().monitor_directory(
+                Gio.FileMonitorFlags.WATCH_MOVES, null);
+        } catch (_) {
+            this._socketMonitor = null;
             return;
+        }
+        if (!this._socketMonitor)
+            return;
+        const basename = socketFile.get_basename();
+        this._socketMonitorSignal = this._socketMonitor.connect('changed', (_monitor, file) => {
+            if (!this._destroyed && file.get_basename() === basename) {
+                this._retryAttempts = 0;
+                this._connect();
+            }
+        });
+    }
+
+    _stopWatchingSocketDirectory() {
+        if (this._socketMonitor && this._socketMonitorSignal)
+            this._socketMonitor.disconnect(this._socketMonitorSignal);
+        this._socketMonitor?.cancel();
+        this._socketMonitor = null;
+        this._socketMonitorSignal = 0;
+    }
+
+    _scheduleRetry() {
+        if (this._destroyed || this._retrySource || this._retryAttempts >= MAX_RETRIES)
+            return;
+        this._retryAttempts++;
         this._retrySource = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT, RETRY_SECONDS, () => {
                 this._retrySource = 0;

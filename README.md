@@ -66,7 +66,7 @@ Clipboard history tracking and playback control do not require a clipboard manag
 
 When a browser session reports `Playing`, the extension pauses it before opening the same item in MPV. If MPRIS provides a playback position, MPV starts there. MPV's normal user configuration remains in effect; the extension does not change `ytdl-format` or other preferences.
 
-The default MPV IPC socket is `/tmp/mpvsocket`. If another process uses this path or MPV uses a different socket path, queueing may not connect. Opening a URL in MPV remains available.
+MPV's IPC socket is created at `$XDG_RUNTIME_DIR/mpvsocket`, inside the per-user runtime directory, so it is not reachable by other users. If another process uses this path or MPV uses a different socket path, queueing may not connect. Opening a URL in MPV remains available.
 
 ## Install from a checkout
 
