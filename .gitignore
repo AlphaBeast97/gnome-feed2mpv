@@ -1,6 +1,3 @@
 *.zip
 node_modules/
 .freebuff
-feed2mpv.mp4
-feed2mpv-30fps.mp4
-feed2mpv.gif
