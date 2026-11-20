@@ -9,9 +9,7 @@
 A GNOME Shell extension for handing browser media to MPV from one GNOME menu. It runs in GNOME Shell, so you do not need to install a browser extension, native-messaging host, or separate helper for each browser. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
 <p align="center">
-  <a href="feed2mpv-30fps.mp4">
-    <img src="feed2mpv-preview.jpg" alt="Feed2MPV demo — click to play the video" width="720">
-  </a>
+  <img src="feed2mpv.gif" alt="Feed2MPV demo" width="720">
 </p>
 
 ## Why use MPV?
