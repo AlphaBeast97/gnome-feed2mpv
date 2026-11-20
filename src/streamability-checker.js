@@ -4,7 +4,8 @@ import GLib from 'gi://GLib';
 const CHECK_TIMEOUT_SECONDS = 15;
 const MAX_CONCURRENT_CHECKS = 2;
 const CACHE_LIMIT = 64;
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const SUCCESS_CACHE_TTL_MS = 10 * 60 * 1000;
+const FAILURE_CACHE_TTL_MS = 30 * 1000;
 
 function hasPlayableFormat(info) {
     if (!info || typeof info !== 'object' || info._type === 'playlist')
@@ -148,7 +149,8 @@ export class StreamabilityChecker {
             return;
 
         this._cache.delete(url);
-        this._cache.set(url, {streamable, expiresAt: Date.now() + CACHE_TTL_MS});
+        const cacheTtl = streamable ? SUCCESS_CACHE_TTL_MS : FAILURE_CACHE_TTL_MS;
+        this._cache.set(url, {streamable, expiresAt: Date.now() + cacheTtl});
         while (this._cache.size > CACHE_LIMIT)
             this._cache.delete(this._cache.keys().next().value);
 
