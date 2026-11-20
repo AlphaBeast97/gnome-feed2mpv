@@ -1,6 +1,6 @@
 import GLib from 'gi://GLib';
 
-import {mediaUrl, MprisMonitor, parseMprisProperties, youtubeUrl} from '../mpris.js';
+import {mediaUrl, MprisMonitor, parseMprisProperties, youtubeUrl} from '../src/mpris.js';
 
 function assertEqual(actual, expected, name) {
     if (actual !== expected)

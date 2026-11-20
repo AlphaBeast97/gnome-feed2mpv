@@ -1,18 +1,22 @@
-import {parseIsleItems} from '../clipboard-history.js';
+import {urlFromText, videoFromUrl, youtubeVideoId} from '../src/clipboard-utils.js';
+import {parseOEmbedTitle} from '../src/video-title.js';
 
-const items = parseIsleItems(JSON.stringify([
-    {id: 18, kind: 'link', preview: 'https://youtu.be/abcdefghijk', at_ms: 300},
-    {id: 17, kind: 'text', preview: 'Watch this https://example.com/video', at_ms: 200},
-    {id: 16, kind: 'image', preview: 'https://example.com/not-a-link-entry'},
-    {id: 15, kind: 'link', preview: 'https://example.com/watch…', at_ms: 100},
-    {id: 14, kind: 'link', preview: 'https://example.com/pinned-old', pinned: true, at_ms: 10},
-]));
+const copiedUrl = urlFromText('Watch this: https://youtu.be/abcdefghijk).');
+if (copiedUrl !== 'https://www.youtube.com/watch?v=abcdefghijk')
+    throw new Error(`unexpected normalized YouTube URL: ${copiedUrl}`);
 
-if (items.length !== 4)
-    throw new Error(`expected four URL-bearing Isle entries, got ${items.length}`);
-if (items[0].id !== 18 || items[1].id !== 17 || items[3].id !== 14)
-    throw new Error('Isle clipboard history was not ordered by newest copy time');
-if (parseIsleItems('not JSON').length !== 0)
-    throw new Error('malformed Isle data should produce an empty history');
+if (youtubeVideoId(copiedUrl) !== 'abcdefghijk')
+    throw new Error('YouTube video ID was not recognized');
 
-print('Isle clipboard history checks passed');
+const video = videoFromUrl(copiedUrl, 1234);
+if (video.title !== 'YouTube video (abcdefghijk)' || video.copiedAt !== 1234)
+    throw new Error('clipboard fallback video metadata was not created');
+
+if (urlFromText('copied plain text') !== null)
+    throw new Error('plain text should not be treated as a video URL');
+
+if (parseOEmbedTitle('{"title":"A video title"}') !== 'A video title' ||
+    parseOEmbedTitle('not JSON') !== null)
+    throw new Error('YouTube title metadata was not parsed safely');
+
+print('Clipboard URL checks passed');

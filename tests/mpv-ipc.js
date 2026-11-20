@@ -1,4 +1,4 @@
-import {MpvIpcMonitor} from '../mpv-ipc.js';
+import {MpvIpcMonitor} from '../src/mpv-ipc.js';
 
 const states = [];
 const monitor = new MpvIpcMonitor(state => states.push(state));

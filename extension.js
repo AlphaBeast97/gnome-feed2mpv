@@ -5,10 +5,11 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import {ClipboardHistory} from './clipboard-history.js';
-import {MprisMonitor} from './mpris.js';
-import {MpvIpcMonitor} from './mpv-ipc.js';
-import {openInMpv, queueInMpv, readClipboardUrl} from './player.js';
+import {ClipboardHistory} from './src/clipboard-history.js';
+import {MprisMonitor} from './src/mpris.js';
+import {MpvIpcMonitor} from './src/mpv-ipc.js';
+import {openInMpv, queueInMpv, readClipboardUrl} from './src/player.js';
+import {VideoTitleResolver} from './src/video-title.js';
 
 const PLAYER_NAMES = {
     brave: 'Brave',
@@ -34,11 +35,17 @@ export default class YouTubeToMpvExtension extends Extension {
         this._mpvTitle = null;
         this._menuSignature = '';
         this._clipboard = St.Clipboard.get_default();
-        this._clipboardHistory = new ClipboardHistory();
-
+        this._videoTitleResolver = new VideoTitleResolver();
+        this._clipboardHistory = new ClipboardHistory(
+            this._clipboard,
+            videos => {
+                this._clipboardItems = videos;
+                this._enrichClipboardTitles();
+                this._updateUi();
+            });
         this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
         this._icon = new St.Icon({
-            icon_name: 'video-x-generic-symbolic',
+            icon_name: 'media-playback-stop-symbolic',
             style_class: 'system-status-icon',
         });
         this._indicator.add_child(this._icon);
@@ -72,6 +79,7 @@ export default class YouTubeToMpvExtension extends Extension {
         this._monitor?.destroy();
         this._mpvMonitor?.destroy();
         this._clipboardHistory?.destroy();
+        this._videoTitleResolver?.destroy();
         if (this._indicator) {
             if (this._menuSignal)
                 this._indicator.menu.disconnect(this._menuSignal);
@@ -81,6 +89,7 @@ export default class YouTubeToMpvExtension extends Extension {
         this._monitor = null;
         this._mpvMonitor = null;
         this._clipboardHistory = null;
+        this._videoTitleResolver = null;
         this._indicator = null;
         this._icon = null;
         this._statusItem = null;
@@ -143,7 +152,7 @@ export default class YouTubeToMpvExtension extends Extension {
         this._addHeading('Recent Clipboard URLs');
         if (this._clipboardItems.length === 0) {
             const history = new PopupMenu.PopupMenuItem(
-                'No recent Isle clipboard URLs available');
+                'No recent copied video links');
             history.setSensitive(false);
             this._indicator.menu.addMenuItem(history);
         } else {
@@ -224,6 +233,7 @@ export default class YouTubeToMpvExtension extends Extension {
     _refreshClipboardHistory() {
         this._clipboardHistory.refresh(videos => {
             this._clipboardItems = videos;
+            this._enrichClipboardTitles(true);
             this._updateUi();
         });
     }
@@ -234,7 +244,30 @@ export default class YouTubeToMpvExtension extends Extension {
         this._selectedVideo = videos.find(video => this._videoKey(video) === selectedKey)
             ?? videos[0]
             ?? null;
+        this._enrichClipboardTitles();
         this._updateUi();
+    }
+
+    _enrichClipboardTitles(resolveMissingTitles = false) {
+        for (const item of this._clipboardItems) {
+            const media = this._videos.find(video => video.url === item.url &&
+                video.title && video.title !== 'Browser media');
+            if (media) {
+                item.title = media.title;
+                item.titleSource = 'mpris';
+                continue;
+            }
+            if (!resolveMissingTitles || item.titleSource === 'oembed')
+                continue;
+            this._videoTitleResolver.resolve(item.url, title => {
+                const current = this._clipboardItems.find(video => video.url === item.url);
+                if (!current || !title)
+                    return;
+                current.title = title;
+                current.titleSource = 'oembed';
+                this._updateUi();
+            });
+        }
     }
 
     _videoKey(video) {
@@ -284,21 +317,30 @@ export default class YouTubeToMpvExtension extends Extension {
         const state = this._state();
         const icons = {
             searching: 'view-refresh-symbolic',
-            empty: 'video-x-generic-symbolic',
+            empty: 'media-playback-stop-symbolic',
             ready: 'media-playback-start-symbolic',
             'browser-playing': 'media-playback-start-symbolic',
             loading: 'view-refresh-symbolic',
             playing: 'media-playback-start-symbolic',
             paused: 'media-playback-pause-symbolic',
         };
+        const colors = {
+            ready: '#e6a700',
+            'browser-playing': '#4caf50',
+            loading: '#e6a700',
+            playing: '#4caf50',
+            paused: '#8a8a8a',
+        };
+        const style = colors[state] ? `color: ${colors[state]};` : null;
         this._icon.icon_name = icons[state];
+        this._icon.set_style(style);
         this._indicator.accessible_name = `${this.metadata.name}: ${this._statusText()}`;
 
         const signature = JSON.stringify({
             state,
             selected: this._videoKey(this._selectedVideo),
             videos: this._videos.map(video => [video.busName, video.url, video.title, video.status]),
-            clipboardItems: this._clipboardItems.map(video => video.url),
+            clipboardItems: this._clipboardItems.map(video => [video.url, video.title]),
         });
         if (signature !== this._menuSignature) {
             this._menuSignature = signature;
