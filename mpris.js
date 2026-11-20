@@ -87,14 +87,17 @@ function validId(value) {
 }
 
 export class MprisMonitor {
-    constructor(onVideoChanged) {
-        this._onVideoChanged = onVideoChanged;
+    constructor(onVideosChanged, onInitialScanComplete = () => {}) {
+        this._onVideosChanged = onVideosChanged;
+        this._onInitialScanComplete = onInitialScanComplete;
         this._cancellable = new Gio.Cancellable();
         this._subscriptions = [];
         this._players = new Map();
         this._busNames = new Set();
         this._owners = new Map();
         this._destroyed = false;
+        this._initialScanComplete = false;
+        this._initialScanPending = 0;
     }
 
     start() {
@@ -102,7 +105,7 @@ export class MprisMonitor {
             'org.freedesktop.DBus', 'org.freedesktop.DBus', 'NameOwnerChanged',
             '/org/freedesktop/DBus', null, Gio.DBusSignalFlags.NONE,
             (_connection, _sender, _path, _interface, _signal, parameters) => {
-                const [name, _oldOwner, newOwner] = parameters.deepUnpack();
+                const [name, oldOwner, newOwner] = parameters.deepUnpack();
                 if (!name.startsWith(MPRIS_PREFIX))
                     return;
                 if (oldOwner)
@@ -115,7 +118,7 @@ export class MprisMonitor {
                     this._busNames.delete(name);
                     this._players.delete(name);
                 }
-                this._publishBest();
+                this._publishVideos();
             }));
         this._subscriptions.push(Gio.DBus.session.signal_subscribe(
             null, 'org.freedesktop.DBus.Properties', 'PropertiesChanged',
@@ -140,7 +143,8 @@ export class MprisMonitor {
         this._players.clear();
         this._busNames.clear();
         this._owners.clear();
-        this._onVideoChanged = null;
+        this._onVideosChanged = null;
+        this._onInitialScanComplete = null;
     }
 
     _listNames() {
@@ -152,21 +156,36 @@ export class MprisMonitor {
                     return;
                 try {
                     const [names] = connection.call_finish(result).deepUnpack();
-                    for (const name of names) {
-                        if (name.startsWith(MPRIS_PREFIX)) {
-                            this._busNames.add(name);
-                            this._watchOwner(name);
-                            this._refresh(name);
-                        }
+                    const players = names.filter(name => name.startsWith(MPRIS_PREFIX));
+                    this._initialScanPending = players.length;
+                    if (players.length === 0) {
+                        this._finishInitialScan();
+                        return;
+                    }
+                    for (const name of players) {
+                        this._busNames.add(name);
+                        this._watchOwner(name);
+                        this._refresh(name, () => {
+                            this._initialScanPending--;
+                            if (this._initialScanPending === 0)
+                                this._finishInitialScan();
+                        });
                     }
                 } catch (_) {
-                    this._publishBest();
+                    this._finishInitialScan();
                 }
             });
     }
 
     refresh(busName, callback = null) {
         this._refresh(busName, callback);
+    }
+
+    _finishInitialScan() {
+        if (this._initialScanComplete || this._destroyed)
+            return;
+        this._initialScanComplete = true;
+        this._onInitialScanComplete?.();
     }
 
     _watchOwner(busName) {
@@ -207,16 +226,16 @@ export class MprisMonitor {
                     this._players.delete(busName);
                     callback?.(null);
                 }
-                this._publishBest();
+                this._publishVideos();
             });
     }
 
-    _publishBest() {
+    _publishVideos() {
         if (this._destroyed)
             return;
         const videos = [...this._players.values()];
         videos.sort((a, b) => Number(b.status === 'Playing') - Number(a.status === 'Playing'));
-        this._onVideoChanged?.(videos[0] ?? null);
+        this._onVideosChanged?.(videos);
     }
 }
 

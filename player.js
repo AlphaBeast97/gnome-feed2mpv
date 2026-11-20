@@ -45,7 +45,7 @@ export function openInMpv(video, options = {}) {
     return launch(argumentsFor(video, options));
 }
 
-export function queueInMpv(video, onUnavailable) {
+export function queueInMpv(video, onUnavailable, onQueued = () => {}) {
     pauseBrowser(video);
     const client = new Gio.SocketClient();
     const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
@@ -65,6 +65,7 @@ export function queueInMpv(video, onUnavailable) {
                 try {
                     stream.write_all_finish(writeResult);
                     connection.close(null);
+                    onQueued();
                 } catch (_) {
                     connection.close(null);
                     onUnavailable();
