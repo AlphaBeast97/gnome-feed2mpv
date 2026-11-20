@@ -1,5 +1,9 @@
 # GNOME Feed2MPV
 
+<p align="center">
+  <img src="gnome-feed2mpv.svg" alt="GNOME Feed2MPV logo" width="112">
+</p>
+
 [![Checks](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml/badge.svg)](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml)
 
 A GNOME Shell extension for handing browser media to MPV from one GNOME menu. It runs in GNOME Shell, so you do not need to install a browser extension, native-messaging host, or separate helper for each browser. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
@@ -14,11 +18,14 @@ This extension is for people who already use MPV and want web media in the same 
 - Opens a selected URL in MPV, optionally starts audio-only playback, or queues a URL in an existing MPV process.
 - Shows MPV loading, playing, paused, and stopped controls in the extension menu.
 - Keeps up to five copied HTTP(S) URLs in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL. It neither changes the clipboard nor depends on a particular clipboard manager.
+- Checks recent copied URLs with `yt-dlp` when the menu opens and shows only links for which media formats can be extracted. Actively detected browser sessions remain visible.
 - Can read existing recent URL entries from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
 - Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
 - Shortens menu titles to 48 characters so long video names do not make the popup excessively wide. The full title and URL remain available in the row tooltip.
 
 Only URLs are kept by the session tracker, in memory, and the list resets when the extension is disabled or GNOME Shell restarts. The optional history service can provide links copied before the extension was enabled. The extension does not read or import the private databases of individual clipboard manager applications, so it does not need separate integrations for each one.
+
+When the menu opens, the streamability filter asks `yt-dlp` to inspect the recent copied URLs without downloading media. This contacts the corresponding sites to resolve their metadata. Results are cached in memory for the current extension session. A successful check does not guarantee playback: authentication, DRM, expired links, or site changes can still prevent MPV from playing a URL.
 
 ## Browser support
 
@@ -110,6 +117,7 @@ src/
   mpv-ipc.js                 MPV state and playback controls
   player.js                  MPV launching, queueing, and current clipboard action
   video-title.js             YouTube title lookup for exact video URLs
+  streamability-checker.js   Asynchronous yt-dlp checks for recent copied links
 tests/                       Focused GJS checks for parsers and state handling
 ```
 

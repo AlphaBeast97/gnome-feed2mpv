@@ -7,6 +7,7 @@ GNOME Feed2MPV is a GNOME Shell extension for choosing browser media sessions an
 - Run as a GNOME Shell extension using the GNOME 45+ ES module API.
 - Launch MPV directly from GNOME Shell. Do not require a browser extension, native-messaging host, or per-browser helper.
 - Discover browser media through MPRIS and use copied URLs as a browser-independent fallback.
+- When the menu is opened, asynchronously check recent copied links with yt-dlp in simulation mode; list only links with playable audio or video formats, cache results in memory, and time out slow checks. Do not download media or probe links just because they were copied.
 - Treat MPRIS metadata as optional and incomplete: only advertise automatic detection when a player provides a usable URL or supported YouTube artwork metadata.
 - Keep YouTube-specific behavior limited to optional artwork URL recovery and exact-URL title lookup. Playback of copied HTTP(S) URLs is not YouTube-specific.
 

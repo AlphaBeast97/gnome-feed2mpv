@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Explain that the GNOME Shell extension launches MPV directly and does not need a separate browser helper.
+- Check recent copied links with yt-dlp before listing them as streamable candidates.
 
 ## 1.0.2
 
