@@ -10,6 +10,7 @@ import {MprisMonitor} from './src/mpris.js';
 import {MpvIpcMonitor} from './src/mpv-ipc.js';
 import {openInMpv, queueInMpv, readClipboardUrl} from './src/player.js';
 import {VideoTitleResolver} from './src/video-title.js';
+import {menuTitle} from './src/menu-utils.js';
 
 const PLAYER_NAMES = {
     brave: 'Brave',
@@ -24,7 +25,6 @@ const PLAYER_NAMES = {
     vivaldi: 'Vivaldi',
     zen: 'Zen',
 };
-
 export default class YouTubeToMpvExtension extends Extension {
     enable() {
         this._videos = [];
@@ -157,8 +157,9 @@ export default class YouTubeToMpvExtension extends Extension {
             this._indicator.menu.addMenuItem(history);
         } else {
             for (const video of this._clipboardItems) {
-                const item = new PopupMenu.PopupMenuItem(`${video.title}  ·  Clipboard history`);
-                item.tooltip_text = video.url;
+                const item = new PopupMenu.PopupMenuItem(
+                    `${menuTitle(video.title)}  ·  Clipboard history`);
+                item.tooltip_text = `${video.title}\n${video.url}`;
                 item.connect('activate', () => this._playVideo(video));
                 this._indicator.menu.addMenuItem(item);
             }
@@ -175,8 +176,8 @@ export default class YouTubeToMpvExtension extends Extension {
     _addVideo(video, availability) {
         const playing = video.current && video.status === 'Playing' ? '  ·  Playing' : '';
         const row = new PopupMenu.PopupMenuItem(
-            `${video.title}  ·  ${this._playerName(video.busName)}  ·  ${availability}${playing}`);
-        row.tooltip_text = video.url;
+            `${menuTitle(video.title)}  ·  ${this._playerName(video.busName)}  ·  ${availability}${playing}`);
+        row.tooltip_text = `${video.title}\n${video.url}`;
         row.connect('activate', () => {
             this._selectedVideo = video;
             this._withSelectedVideo(selected => this._playVideo(selected),
