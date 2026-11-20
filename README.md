@@ -1,105 +1,110 @@
 # YouTube to MPV
 
-A GNOME Shell panel extension for finding browser media sessions and opening their URLs in MPV. You can choose among detected sessions and recently seen media, open a copied URL, queue another URL in an already running MPV, and control MPV playback from the extension menu.
+A GNOME Shell extension for finding browser media and opening it in MPV. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
-The panel indicator is icon-only. Its icon changes for searching, no detected media, ready media, MPV loading, playback, and pause. The menu provides the corresponding status text and media choices.
+## What it does
 
-## Compatibility
+- Detects media sessions published on MPRIS and lists the current and recently seen media.
+- Opens a selected URL in MPV, optionally starts audio-only playback, or queues a URL in an existing MPV process.
+- Shows MPV loading, playing, paused, and stopped controls in the extension menu.
+- Keeps up to five copied HTTP(S) URLs in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL. It neither changes the clipboard nor depends on a particular clipboard manager.
+- Can read existing recent URL entries from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
+- Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
 
-### GNOME Shell
+Only URLs are kept by the session tracker, in memory, and the list resets when the extension is disabled or GNOME Shell restarts. The optional history service can provide links copied before the extension was enabled. The extension does not read or import the private databases of individual clipboard manager applications, so it does not need separate integrations for each one.
 
-The extension declares GNOME Shell **46, 47, 48, 49, 50, and 51** in `metadata.json`. It uses the GNOME 45+ ES module extension API and Shell UI components, plus Gio D-Bus and subprocess APIs. The development machine used for this release work is GNOME Shell 51.1; the older declared versions still need a runtime check on their respective Shell releases before claiming release-tested support.
+## Browser support
 
-### Browsers
-
-There is no Linux API that lets a Shell extension enumerate every browser's tabs. Automatic detection depends on a browser publishing a media session on the desktop's MPRIS D-Bus interface. Browsers vary in whether they publish it and which metadata they include. This table describes the detection path, not a guarantee for every browser release or configuration.
+Automatic detection requires a browser to publish an MPRIS media player. Linux has no standard API for a Shell extension to enumerate every browser's tabs, and browser MPRIS implementations vary. A browser that publishes no MPRIS player cannot be detected automatically.
 
 | Browser family | Detection path | Limit |
 | --- | --- | --- |
-| Firefox, Zen, Floorp, and LibreWolf | MPRIS `xesam:url`, when supplied | A browser or site can omit the page URL. |
-| Chromium, Chrome, Brave, Edge, Vivaldi, Opera | MPRIS page URL when supplied; for YouTube, a video ID can sometimes be recovered from the MPRIS artwork thumbnail | Chromium-family sessions may publish a title and artwork without `xesam:url`. Artwork fallback is YouTube-specific. A browser that publishes no MPRIS player cannot be detected automatically. |
-| Epiphany and other Linux browsers | MPRIS `xesam:url`, when supplied | Support depends on that browser's MPRIS implementation and metadata. |
+| Firefox, Zen, Floorp, LibreWolf | MPRIS `xesam:url`, when supplied | Some browser/site combinations omit the URL. |
+| Chromium, Chrome, Brave, Edge, Vivaldi, Opera | MPRIS page URL when supplied; YouTube video ID may be recovered from artwork metadata | Some sessions publish title and artwork without `xesam:url`. Artwork recovery works only for YouTube links. |
+| Epiphany and other Linux browsers | MPRIS `xesam:url`, when supplied | Support depends on the browser's MPRIS implementation and metadata. |
 
-For any browser, use **Open Current Clipboard URL** or a recent Isle clipboard URL when automatic discovery is unavailable. The extension reads the current desktop clipboard only after you activate an action that needs it. It reads recent Isle history through Isle's read-only D-Bus API when Isle is running and its clipboard history is available. It does not write to the clipboard or call Isle's history mutation methods. Without Isle, recent-history entries are unavailable; current clipboard playback is still available.
+When automatic detection is unavailable, copy a page URL while the extension is enabled, then choose it from the menu. The current clipboard can also be opened directly from the menu.
 
-## What the extension detects
+### YouTube title lookup
 
-The extension monitors MPRIS players and presents current media sessions together with up to five recently seen URLs per player (up to twenty recent entries overall). When a browser publishes a usable page URL, selecting the session opens that URL in MPV. It pauses the browser session when it reports `Playing` and starts MPV at the reported position when available.
+If MPRIS did not provide a title, the extension can request metadata for a copied YouTube URL from YouTube's oEmbed endpoint. The lookup uses the exact video URL, so it does not guess among search results. It may not return a title for private, unavailable, or restricted videos. The request is made when the extension menu is used and is limited to YouTube URLs. [YouTube oEmbed endpoint](https://www.youtube.com/oembed)
 
-Some Chromium-family browser builds expose YouTube's thumbnail URL as `mpris:artUrl` but omit `xesam:url`. In that case, the thumbnail's video ID can identify the YouTube video. It cannot recover a general website URL from a title or artist name.
+## GNOME Shell compatibility
 
-### About title and artist search on YouTube
-
-Querying YouTube for every MPRIS title and artist is technically possible with asynchronous libsoup requests, but it is not a dependable automatic fallback. Search results can select a different upload, edit, live version, or cover. YouTube's result-page markup is not a stable extension API and may vary with consent pages, localization, and anti-bot behavior. The request would also send media titles from arbitrary apps to YouTube. For these reasons, this extension does **not** perform that lookup automatically. A deliberate, disclosed “Search YouTube for this title” action could be considered later, with clear user initiation and a reliable supported search interface.
-
-The proposed Tier 2 approach also cannot fix a browser that does not publish an MPRIS session at all: it needs the session's title and artist as input. It is useful only for sessions that exist but lack `xesam:url`, and remains a best-effort identification method.
-
-## MPV behavior
-
-- **Open Selected in MPV** starts the selected URL in MPV.
-- **Queue Selected in Running MPV** appends the selected URL through MPV's IPC socket when available. If no socket is available, it opens the URL in a new MPV process.
-- **Open Selected Audio Only** starts MPV with video disabled. Pause/resume and stop controls remain available in the extension menu even though MPV has no visible window.
-- **Open Current Clipboard URL** reads the current clipboard on activation and opens its HTTP(S) URL.
-- Recent Isle clipboard URLs appear in the menu when Isle's D-Bus service is available. Choosing one opens it in MPV.
-
-MPV is launched with its normal user configuration. The extension does not change `ytdl-format` or other MPV preferences. YouTube playback generally requires a working `yt-dlp` installation configured for MPV.
-
-The default MPV IPC socket path is `/tmp/mpvsocket`. If another process uses that path or MPV is configured with a different socket, queueing may not connect; opening in MPV remains available.
+`metadata.json` targets GNOME Shell 46 through 51. The code uses the GNOME 45+ ES module extension API and Shell UI components. The development environment used for this work is GNOME Shell 51.1. The other declared Shell versions still need runtime checks on their respective releases before claiming release-tested support.
 
 ## Requirements
 
 - GNOME Shell 46–51
 - MPV on `PATH`
-- `yt-dlp` for sites that MPV cannot play directly
-- Isle for recent Isle clipboard-history entries (optional)
-- A browser with MPRIS support for automatic browser-media detection
+- `yt-dlp` for YouTube and other sites that MPV cannot play directly
+- A browser publishing MPRIS for automatic media detection
+- An internet connection to resolve a missing title for a YouTube link
+
+Clipboard history tracking and playback control do not require a clipboard manager. Existing older history is optional and depends on whether a compatible local history service is installed.
+
+## Playback behavior
+
+- **Open Selected in MPV** starts the selected URL.
+- **Queue Selected in Running MPV** appends the URL through MPV's IPC socket when available. If there is no socket, the extension starts another MPV process.
+- **Open Selected Audio Only** starts MPV with video disabled. Pause/resume and stop remain available in the extension menu.
+- **Open Current Clipboard URL** reads the clipboard on activation and opens its HTTP(S) URL.
+- Selecting a recent copied URL opens it in MPV.
+
+When a browser session reports `Playing`, the extension pauses it before opening the same item in MPV. If MPRIS provides a playback position, MPV starts there. MPV's normal user configuration remains in effect; the extension does not change `ytdl-format` or other preferences.
+
+The default MPV IPC socket is `/tmp/mpvsocket`. If another process uses this path or MPV uses a different socket path, queueing may not connect. Opening a URL in MPV remains available.
 
 ## Install from a checkout
 
-From this directory, package the extension:
+Run this from the repository root:
 
 ```sh
-gnome-extensions pack . \
-  --extra-source=mpris.js \
-  --extra-source=player.js \
-  --extra-source=mpv-ipc.js \
-  --extra-source=clipboard-history.js
+gnome-extensions pack . --extra-source=src
 ```
 
-Install the generated ZIP using the GNOME Extensions app, or:
+Install the generated ZIP with the GNOME Extensions app or the command line:
 
 ```sh
 gnome-extensions install youtube-to-mpv@alphabeast97.github.io.shell-extension.zip
 gnome-extensions enable youtube-to-mpv@alphabeast97.github.io
 ```
 
-Replace the ZIP filename with the generated filename if it differs. Log out and back in if the Shell version requires a session restart to load a newly installed extension.
+Use the actual ZIP filename printed by `gnome-extensions pack`. Depending on the GNOME Shell version, a logout and login may be needed before the updated extension is loaded.
 
 ## Troubleshooting
 
 ### A browser is missing from the menu
 
-Check whether the browser exposes an `org.mpris.MediaPlayer2.*` player while media is playing. The extension can only list sessions it receives on D-Bus. If there is no MPRIS player, copy the page URL and use the clipboard action or select it from Isle history.
+Check whether the browser exposes an `org.mpris.MediaPlayer2.*` player while media is playing. The extension can list only sessions it receives over D-Bus. If there is no MPRIS player, copy the page URL while the extension is enabled and choose it from the recent links.
 
-If a player appears but its title has no URL and the media is not a YouTube video with a recognizable thumbnail, the browser has not provided enough information for this extension to form a playback URL.
+If a player is present but provides neither a page URL nor a recognizable YouTube artwork URL, there may not be enough metadata to build a playback URL.
 
-### Clipboard history is empty
+### A recent link has no video title
 
-The history section reads Isle's `io.github.zickrian.isle.Daemon` service and only inspects recent link and text entries containing HTTP(S) URLs. Isle must be running and its clipboard-history feature must be enabled. This is separate from tools such as `cliphist`; those histories are not read. The current clipboard action does not depend on Isle.
+The menu uses a title from a matching MPRIS session when one exists. Otherwise, YouTube's exact-link metadata lookup may take a moment or may not return a title for restricted videos. For other sites, the fallback label is the host name because clipboard URLs do not include page titles.
 
 ### MPV does not start or cannot play a URL
 
-Confirm that `mpv` is available on `PATH`. For YouTube and many streaming sites, confirm that MPV can find a current `yt-dlp` executable. Try the URL directly in MPV to distinguish an extension detection issue from a site or extractor issue.
+Confirm that `mpv` is available on `PATH`. For YouTube and many streaming sites, confirm that MPV can find a current `yt-dlp` executable. Try the URL directly in MPV to distinguish a detection issue from a site or extractor issue.
+
+## Project layout
+
+```text
+extension.js                 GNOME Shell entry point, panel button, and menu
+metadata.json                Extension ID, description, and supported Shell versions
+src/
+  clipboard-history.js       Manager-independent clipboard URL tracking
+  clipboard-utils.js         URL extraction and media labels
+  history-providers/         Optional local history service adapters
+  mpris.js                   Browser media discovery and recent sessions
+  mpv-ipc.js                 MPV state and playback controls
+  player.js                  MPV launching, queueing, and current clipboard action
+  video-title.js             YouTube title lookup for exact video URLs
+tests/                       Focused GJS checks for parsers and state handling
+```
 
 ## Development and checks
-
-The source is split by responsibility:
-
-- `extension.js` owns the panel button, menu, selection, and lifecycle cleanup.
-- `mpris.js` discovers MPRIS players, parses media metadata, and retains recent URLs.
-- `player.js` starts MPV, queues URLs, pauses the source browser, and reads the current clipboard on request.
-- `mpv-ipc.js` tracks MPV state and sends pause, resume, and stop commands.
-- `clipboard-history.js` reads recent Isle URL entries without modifying Isle's history.
 
 Run the focused checks with GJS:
 
@@ -109,7 +114,7 @@ gjs -m tests/mpv-ipc.js
 gjs -m tests/clipboard-history.js
 ```
 
-Before release, also package and install on each GNOME Shell major version listed in `metadata.json`, then check enable/disable cleanup, the panel icon and menu, MPRIS discovery, clipboard actions, and MPV controls. Browser behavior should be checked against the exact browser builds being advertised because MPRIS metadata differs between builds.
+Before release, package and install on each GNOME Shell version listed in `metadata.json`, then check enable/disable cleanup, the icon and menu, MPRIS discovery, copied-link tracking, title lookup, and MPV controls. Browser behavior should be checked against the exact browser builds being advertised because MPRIS metadata differs by browser and build.
 
 ## License
 
