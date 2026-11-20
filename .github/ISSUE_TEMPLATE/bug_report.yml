@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible problem with the extension.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include private video URLs, account information, or clipboard contents.
+  - type: input
+    id: shell-version
+    attributes:
+      label: GNOME Shell version
+      placeholder: "51.1"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: "Firefox 145, Brave 1.x, or other"
+  - type: input
+    id: site
+    attributes:
+      label: Site or media type
+      description: A site name is enough; do not paste a private URL.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: Numbered steps help us reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact usernames, private URLs, and other personal information.

@@ -159,6 +159,7 @@ export default class YouTubeToMpvExtension extends Extension {
             for (const video of this._clipboardItems) {
                 const item = new PopupMenu.PopupMenuItem(
                     `${menuTitle(video.title)}  ·  Clipboard history`);
+                item.accessible_name = `${video.title}, clipboard history`;
                 item.tooltip_text = `${video.title}\n${video.url}`;
                 item.connect('activate', () => this._playVideo(video));
                 this._indicator.menu.addMenuItem(item);
@@ -174,9 +175,12 @@ export default class YouTubeToMpvExtension extends Extension {
     }
 
     _addVideo(video, availability) {
-        const playing = video.current && video.status === 'Playing' ? '  ·  Playing' : '';
+        const playing = video.current && video.status === 'Playing' && availability !== 'Playing'
+            ? '  ·  Playing'
+            : '';
         const row = new PopupMenu.PopupMenuItem(
             `${menuTitle(video.title)}  ·  ${this._playerName(video.busName)}  ·  ${availability}${playing}`);
+        row.accessible_name = `${video.title}, ${this._playerName(video.busName)}, ${availability}`;
         row.tooltip_text = `${video.title}\n${video.url}`;
         row.connect('activate', () => {
             this._selectedVideo = video;

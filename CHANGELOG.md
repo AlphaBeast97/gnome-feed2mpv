@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Keep long menu titles visually concise while preserving full accessible names.
+- Complete repository contribution, conduct, security, issue, pull request, and accessibility guidance.
+- Explain the intended MPV use case in the README.
+
 ## 1.0.0
 
 - Detect browser media through MPRIS and show multiple current and recently seen streams.

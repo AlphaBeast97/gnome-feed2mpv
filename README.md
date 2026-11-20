@@ -4,6 +4,10 @@
 
 A GNOME Shell extension for finding browser media and opening it in MPV. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
+## Why use MPV?
+
+This extension is for people who prefer MPV as their playback app and want to hand a browser video to it without hunting for the URL. MPV can use your existing playback configuration, keyboard controls, scripts, and site support through `yt-dlp`; this extension adds browser selection, queueing, and audio-only controls from the Shell menu. If you already prefer watching everything in your browser, the extension may not add much for you.
+
 ## What it does
 
 - Detects media sessions published on MPRIS and lists the current and recently seen media.

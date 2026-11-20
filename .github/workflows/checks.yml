@@ -31,3 +31,4 @@ jobs:
           gjs -m tests/mpv-ipc.js
           gjs -m tests/clipboard-history.js
           gjs -m tests/menu-utils.js
+          gjs -m tests/menu-utils.js
