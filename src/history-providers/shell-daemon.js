@@ -11,7 +11,11 @@ const PROXY_XML = `<node><interface name="io.github.zickrian.isle.Clipboard1">
     <property name="Items" type="s" access="read"/>
 </interface></node>`;
 
-function parseItems(serialized) {
+export function itemTime(item) {
+    return Number(item.at ?? item.at_ms ?? 0);
+}
+
+export function parseItems(serialized) {
     try {
         const items = JSON.parse(serialized ?? '[]');
         if (!Array.isArray(items))
@@ -19,7 +23,7 @@ function parseItems(serialized) {
         return items.filter(item =>
             item && (item.kind === 'link' || item.kind === 'text') && item.id !== undefined &&
             urlFromText(item.preview))
-            .sort((left, right) => Number(right.at_ms ?? 0) - Number(left.at_ms ?? 0))
+            .sort((left, right) => itemTime(right) - itemTime(left))
             .slice(0, SCAN_LIMIT);
     } catch (_) {
         return [];
@@ -63,7 +67,7 @@ export class ShellHistoryProvider {
                     return;
                 const url = error ? previewUrl : urlFromText(result?.[0]) ?? previewUrl;
                 if (url && !seen.has(url)) {
-                    const video = videoFromUrl(url, Number(item.at_ms ?? 0));
+                    const video = videoFromUrl(url, itemTime(item));
                     video.source = 'clipboard-history-provider';
                     seen.add(url);
                     videos.push(video);
