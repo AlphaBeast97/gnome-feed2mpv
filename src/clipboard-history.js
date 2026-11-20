@@ -2,7 +2,7 @@ import Meta from 'gi://Meta';
 import St from 'gi://St';
 
 import {ShellHistoryProvider} from './history-providers/shell-daemon.js';
-import {urlFromText, videoFromUrl} from './clipboard-utils.js';
+import {isStreamableUrl, urlFromText, videoFromUrl} from './clipboard-utils.js';
 
 const HISTORY_LIMIT = 5;
 
@@ -29,7 +29,7 @@ export class ClipboardHistory {
             if (this._destroyed || generation !== this._captureGeneration)
                 return;
             const url = urlFromText(text);
-            if (!url)
+            if (!url || !isStreamableUrl(url))
                 return;
             const existing = this._items.find(item => item.url === url);
             const video = videoFromUrl(url);

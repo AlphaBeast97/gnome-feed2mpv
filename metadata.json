@@ -1,7 +1,7 @@
 {
   "uuid": "gnome-feed2mpv@alphabeast97.github.io",
   "name": "GNOME Feed2MPV",
-  "description": "Panel menu for choosing browser media and copied links in GNOME Shell and playing them in MPV. Reads the clipboard only while enabled, keeps copied links in memory, and requests a title from YouTube's oEmbed endpoint for copied YouTube links. No clipboard contents are sent anywhere else.",
+  "description": "Panel menu for choosing browser media and copied links in GNOME Shell and playing them in MPV. Reads the clipboard only while enabled, keeps copied media links in memory, and requests a title from YouTube's oEmbed endpoint for copied YouTube links. No clipboard contents are sent anywhere else.",
   "shell-version": ["46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/alphabeast97/gnome-feed2mpv"
 }

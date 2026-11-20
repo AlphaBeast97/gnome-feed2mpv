@@ -4,6 +4,25 @@ import {mediaUrl} from './mpris.js';
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/i;
 
+const STREAMING_HOSTS = [
+    'bandcamp.com',
+    'bilibili.com',
+    'bitchute.com',
+    'dailymotion.com',
+    'media.ccc.de',
+    'nicovideo.jp',
+    'odysee.com',
+    'rumble.com',
+    'soundcloud.com',
+    'twitch.tv',
+    'vimeo.com',
+];
+
+const MEDIA_EXTENSIONS = new Set([
+    '3gp', 'aac', 'avi', 'flac', 'flv', 'm3u8', 'm4a', 'm4v', 'mkv', 'mov',
+    'mp3', 'mp4', 'mpd', 'oga', 'ogg', 'ogv', 'opus', 'wav', 'webm', 'wma',
+]);
+
 export function urlFromText(text) {
     const match = String(text ?? '').match(URL_PATTERN);
     if (!match)
@@ -42,6 +61,32 @@ export function videoFromUrl(url, copiedAt = Date.now()) {
         source: 'clipboard-history',
         copiedAt,
     };
+}
+
+export function isStreamableUrl(url) {
+    try {
+        const uri = GLib.Uri.parse(url, GLib.UriFlags.NONE);
+        if (uri.get_scheme() !== 'http' && uri.get_scheme() !== 'https')
+            return false;
+        const host = uri.get_host()?.toLowerCase().replace(/^www\./, '');
+        if (!host)
+            return false;
+        if (youtubeVideoId(url))
+            return true;
+        if (STREAMING_HOSTS.some(domain => host === domain || host.endsWith(`.${domain}`)))
+            return true;
+        return hasMediaExtension(uri.get_path() ?? '');
+    } catch (_) {
+        return false;
+    }
+}
+
+function hasMediaExtension(path) {
+    const basename = path.slice(path.lastIndexOf('/') + 1);
+    const dot = basename.lastIndexOf('.');
+    if (dot <= 0)
+        return false;
+    return MEDIA_EXTENSIONS.has(basename.slice(dot + 1).toLowerCase());
 }
 
 function validYouTubeId(value) {

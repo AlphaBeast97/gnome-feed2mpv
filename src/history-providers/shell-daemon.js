@@ -1,6 +1,6 @@
 import Gio from 'gi://Gio';
 
-import {urlFromText, videoFromUrl} from '../clipboard-utils.js';
+import {isStreamableUrl, urlFromText, videoFromUrl} from '../clipboard-utils.js';
 
 const BUS_NAME = 'io.github.zickrian.isle.Daemon';
 const OBJECT_PATH = '/io/github/zickrian/isle/Daemon';
@@ -20,9 +20,12 @@ export function parseItems(serialized) {
         const items = JSON.parse(serialized ?? '[]');
         if (!Array.isArray(items))
             return [];
-        return items.filter(item =>
-            item && (item.kind === 'link' || item.kind === 'text') && item.id !== undefined &&
-            urlFromText(item.preview))
+        return items.filter(item => {
+            if (!item || (item.kind !== 'link' && item.kind !== 'text') || item.id === undefined)
+                return false;
+            const url = urlFromText(item.preview);
+            return url !== null && isStreamableUrl(url);
+        })
             .sort((left, right) => itemTime(right) - itemTime(left))
             .slice(0, SCAN_LIMIT);
     } catch (_) {
@@ -66,7 +69,7 @@ export class ShellHistoryProvider {
                 if (this._destroyed || generation !== this._generation)
                     return;
                 const url = error ? previewUrl : urlFromText(result?.[0]) ?? previewUrl;
-                if (url && !seen.has(url)) {
+                if (url && isStreamableUrl(url) && !seen.has(url)) {
                     const video = videoFromUrl(url, itemTime(item));
                     video.source = 'clipboard-history-provider';
                     seen.add(url);

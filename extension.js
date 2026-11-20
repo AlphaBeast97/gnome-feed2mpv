@@ -181,7 +181,7 @@ export default class Feed2MpvExtension extends Extension {
         this._addHeading('Recent Clipboard URLs');
         if (this._clipboardItems.length === 0) {
             const history = new PopupMenu.PopupMenuItem(
-                'No recent copied video links');
+                'No recent copied media links');
             history.setSensitive(false);
             this._indicator.menu.addMenuItem(history);
         } else {

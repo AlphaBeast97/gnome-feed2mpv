@@ -17,8 +17,8 @@ This extension is for people who already use MPV and want web media in the same 
 - Detects media sessions published on MPRIS and lists the current and recently seen media.
 - Opens a selected URL in MPV, optionally starts audio-only playback, or queues a URL in an existing MPV process.
 - Shows MPV loading, playing, paused, and stopped controls in the extension menu.
-- Keeps up to five copied HTTP(S) URLs in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL. It neither changes the clipboard nor depends on a particular clipboard manager.
-- Can read existing recent URL entries from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
+- Keeps up to five copied media links in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL, then keeps links that point at media: a direct audio or video file, an HLS/DASH manifest, or a page on a recognized streaming site. Other links are dropped without contacting the site. It neither changes the clipboard nor depends on a particular clipboard manager.
+- Can read existing recent media links from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
 - Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
 - Shortens menu titles to 48 characters so long video names do not make the popup excessively wide. The full title is kept in each row's accessible name; GNOME Shell popup menu items have no tooltip, so the popup itself shows the shortened title.
 
@@ -104,6 +104,10 @@ Check whether the browser exposes an `org.mpris.MediaPlayer2.*` player while med
 
 If a player is present but provides neither a page URL nor a recognizable YouTube artwork URL, there may not be enough metadata to build a playback URL.
 
+### A copied link does not appear in the recent links
+
+The recent links list accepts only links that point at media: a direct audio or video file (`.mp4`, `.webm`, `.mkv`, `.m3u8`, `.mp3`, and similar), an HLS/DASH manifest, or a page on a recognized streaming site such as YouTube, Vimeo, Twitch, SoundCloud, or Bandcamp. The check runs offline, so a page that MPV could play through `yt-dlp` but that is not on that list is not shown. **Open Current Clipboard URL** still hands any copied HTTP(S) URL to MPV.
+
 ### A recent link has no video title
 
 The menu uses a title from a matching MPRIS session when one exists. Otherwise, YouTube's exact-link metadata lookup may take a moment or may not return a title for restricted videos. For other sites, the fallback label is the host name because clipboard URLs do not include page titles.
@@ -119,7 +123,7 @@ extension.js                 GNOME Shell entry point, panel button, and menu
 metadata.json                Extension ID, description, and supported Shell versions
 src/
   clipboard-history.js       Manager-independent clipboard URL tracking
-  clipboard-utils.js         URL extraction and media labels
+  clipboard-utils.js         URL extraction, media labels, and streamable-link filtering
   history-providers/         Optional local history service adapters
   mpris.js                   Browser media discovery and recent sessions
   mpv-ipc.js                 MPV state and playback controls
