@@ -25,8 +25,11 @@ const PLAYER_NAMES = {
     vivaldi: 'Vivaldi',
     zen: 'Zen',
 };
-export default class YouTubeToMpvExtension extends Extension {
+export default class Feed2MpvExtension extends Extension {
     enable() {
+        this._destroyed = false;
+        this._menuOpen = false;
+        this._menuDirty = false;
         this._videos = [];
         this._selectedVideo = null;
         this._clipboardItems = [];
@@ -65,17 +68,24 @@ export default class YouTubeToMpvExtension extends Extension {
                 this._updateUi();
             });
         this._menuSignal = this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
+            this._menuOpen = isOpen;
             if (isOpen)
                 this._refreshClipboardHistory();
         });
+        this._menuClosedSignal = this._indicator.menu.connect('menu-closed', () => {
+            if (this._menuDirty)
+                this._buildMenu();
+        });
 
         this._buildMenu();
+        this._refreshClipboardHistory();
         this._mpvMonitor.start();
         this._monitor.start();
         this._updateUi();
     }
 
     disable() {
+        this._destroyed = true;
         this._monitor?.destroy();
         this._mpvMonitor?.destroy();
         this._clipboardHistory?.destroy();
@@ -83,6 +93,8 @@ export default class YouTubeToMpvExtension extends Extension {
         if (this._indicator) {
             if (this._menuSignal)
                 this._indicator.menu.disconnect(this._menuSignal);
+            if (this._menuClosedSignal)
+                this._indicator.menu.disconnect(this._menuClosedSignal);
             this._indicator.menu.removeAll();
             this._indicator.destroy();
         }
@@ -98,9 +110,16 @@ export default class YouTubeToMpvExtension extends Extension {
         this._clipboardItems = [];
         this._selectedVideo = null;
         this._menuSignal = 0;
+        this._menuClosedSignal = 0;
+        this._menuOpen = false;
+        this._menuDirty = false;
+        this._menuSignature = '';
     }
 
     _buildMenu() {
+        if (!this._indicator)
+            return;
+        this._menuDirty = false;
         this._indicator.menu.removeAll();
         this._statusItem = new PopupMenu.PopupMenuItem(this._statusText());
         this._statusItem.setSensitive(false);
@@ -160,7 +179,6 @@ export default class YouTubeToMpvExtension extends Extension {
                 const item = new PopupMenu.PopupMenuItem(
                     `${menuTitle(video.title)}  ·  Clipboard history`);
                 item.accessible_name = `${video.title}, clipboard history`;
-                item.tooltip_text = `${video.title}\n${video.url}`;
                 item.connect('activate', () => this._playVideo(video));
                 this._indicator.menu.addMenuItem(item);
             }
@@ -181,7 +199,6 @@ export default class YouTubeToMpvExtension extends Extension {
         const row = new PopupMenu.PopupMenuItem(
             `${menuTitle(video.title)}  ·  ${this._playerName(video.busName)}  ·  ${availability}${playing}`);
         row.accessible_name = `${video.title}, ${this._playerName(video.busName)}, ${availability}`;
-        row.tooltip_text = `${video.title}\n${video.url}`;
         row.connect('activate', () => {
             this._selectedVideo = video;
             this._withSelectedVideo(selected => this._playVideo(selected),
@@ -203,11 +220,15 @@ export default class YouTubeToMpvExtension extends Extension {
             return;
         }
         this._monitor.refresh(selected.busName, refreshed => {
+            if (this._destroyed)
+                return;
             onSelected(refreshed?.url === selected.url ? refreshed : selected);
         });
     }
 
     _playVideo(video, options = {}) {
+        if (this._destroyed || !this._mpvMonitor)
+            return;
         this._mpvTitle = video.title;
         this._mpvMonitor.expectLoad();
         if (!openInMpv(video, options)) {
@@ -218,16 +239,19 @@ export default class YouTubeToMpvExtension extends Extension {
     }
 
     _queueVideo(video) {
+        if (this._destroyed || !this._mpvMonitor)
+            return;
         this._mpvTitle = video.title;
         this._mpvMonitor.expectLoad();
-        queueInMpv(
-            video,
-            () => this._playVideo(video),
-            () => this._mpvMonitor.expectLoad());
+        queueInMpv(video, () => this._playVideo(video));
     }
 
     _openClipboard(onVideo) {
+        if (this._destroyed || !this._clipboard)
+            return;
         readClipboardUrl(this._clipboard, video => {
+            if (this._destroyed)
+                return;
             if (video)
                 onVideo(video);
             else
@@ -236,7 +260,11 @@ export default class YouTubeToMpvExtension extends Extension {
     }
 
     _refreshClipboardHistory() {
+        if (this._destroyed || !this._clipboardHistory)
+            return;
         this._clipboardHistory.refresh(videos => {
+            if (this._destroyed)
+                return;
             this._clipboardItems = videos;
             this._enrichClipboardTitles(true);
             this._updateUi();
@@ -244,6 +272,8 @@ export default class YouTubeToMpvExtension extends Extension {
     }
 
     _onVideosChanged(videos) {
+        if (this._destroyed)
+            return;
         const selectedKey = this._videoKey(this._selectedVideo);
         this._videos = videos;
         this._selectedVideo = videos.find(video => this._videoKey(video) === selectedKey)
@@ -265,6 +295,8 @@ export default class YouTubeToMpvExtension extends Extension {
             if (!resolveMissingTitles || item.titleSource === 'oembed')
                 continue;
             this._videoTitleResolver.resolve(item.url, title => {
+                if (this._destroyed)
+                    return;
                 const current = this._clipboardItems.find(video => video.url === item.url);
                 if (!current || !title)
                     return;
@@ -329,16 +361,7 @@ export default class YouTubeToMpvExtension extends Extension {
             playing: 'media-playback-start-symbolic',
             paused: 'media-playback-pause-symbolic',
         };
-        const colors = {
-            ready: '#e6a700',
-            'browser-playing': '#4caf50',
-            loading: '#e6a700',
-            playing: '#4caf50',
-            paused: '#8a8a8a',
-        };
-        const style = colors[state] ? `color: ${colors[state]};` : null;
         this._icon.icon_name = icons[state];
-        this._icon.set_style(style);
         this._indicator.accessible_name = `${this.metadata.name}: ${this._statusText()}`;
 
         const signature = JSON.stringify({
@@ -349,9 +372,14 @@ export default class YouTubeToMpvExtension extends Extension {
         });
         if (signature !== this._menuSignature) {
             this._menuSignature = signature;
-            this._buildMenu();
+            if (this._menuOpen) {
+                this._menuDirty = true;
+                this._statusItem?.label.set_text(this._statusText());
+            } else {
+                this._buildMenu();
+            }
         } else {
-            this._statusItem.label.set_text(this._statusText());
+            this._statusItem?.label.set_text(this._statusText());
         }
     }
 }
