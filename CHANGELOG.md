@@ -11,6 +11,7 @@
 - Declare clipboard reading and the YouTube title request in the extension description.
 - Follow the Shell theme instead of setting hardcoded icon colors, and silence MPV's inherited standard output.
 - Package `LICENSE` with the extension and remove a duplicated CI check.
+- Remove the pre-rename `youtube-to-mpv@alphabeast97.github.io` install in the new install script, and warn when it is still present, so both builds cannot run as two panel icons.
 
 ## 1.0.2
 
