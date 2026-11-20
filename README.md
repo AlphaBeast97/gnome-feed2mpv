@@ -20,7 +20,7 @@ This extension is for people who already use MPV and want web media in the same 
 - Keeps up to five copied HTTP(S) URLs in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL. It neither changes the clipboard nor depends on a particular clipboard manager.
 - Can read existing recent URL entries from a compatible local GNOME history service. This is an optional source; live URL tracking works without it or any clipboard-history extension.
 - Uses the active MPRIS title when the copied URL matches a detected session. For YouTube links without a matching title, it requests the title for that exact URL from YouTube's public oEmbed endpoint. It does not search by title or artist. Other URL titles fall back to the host name.
-- Shortens menu titles to 48 characters so long video names do not make the popup excessively wide. The full title and URL remain available in the row tooltip.
+- Shortens menu titles to 48 characters so long video names do not make the popup excessively wide. The full title is kept in each row's accessible name; GNOME Shell popup menu items have no tooltip, so the popup itself shows the shortened title.
 
 Only URLs are kept by the session tracker, in memory, and the list resets when the extension is disabled or GNOME Shell restarts. The optional history service can provide links copied before the extension was enabled. The extension does not read or import the private databases of individual clipboard manager applications, so it does not need separate integrations for each one.
 
@@ -73,7 +73,7 @@ MPV's IPC socket is created at `$XDG_RUNTIME_DIR/mpvsocket`, inside the per-user
 Run this from the repository root:
 
 ```sh
-gnome-extensions pack . --extra-source=src
+gnome-extensions pack . --extra-source=src --extra-source=LICENSE
 ```
 
 Install the generated ZIP with the GNOME Extensions app or the command line:
@@ -125,6 +125,7 @@ Run the focused checks with GJS:
 gjs -m tests/mpris.js
 gjs -m tests/mpv-ipc.js
 gjs -m tests/clipboard-history.js
+gjs -m tests/shell-daemon.js
 gjs -m tests/menu-utils.js
 ```
 

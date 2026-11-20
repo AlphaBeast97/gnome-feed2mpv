@@ -3,6 +3,14 @@
 ## Unreleased
 
 - Explain that the GNOME Shell extension launches MPV directly and does not need a separate browser helper.
+- Guard asynchronous MPV and clipboard callbacks so nothing runs after the extension is disabled.
+- Read the history service's `at` timestamp so imported links keep their recency order, and add a GJS check for it.
+- Defer menu rebuilds while the popup is open so keyboard focus and scroll position are kept.
+- Watch the MPV socket directory instead of retrying the connection every second, and move the socket to `$XDG_RUNTIME_DIR/mpvsocket`.
+- Remove non-functional row tooltips; full titles remain in each row's accessible name.
+- Declare clipboard reading and the YouTube title request in the extension description.
+- Follow the Shell theme instead of setting hardcoded icon colors, and silence MPV's inherited standard output.
+- Package `LICENSE` with the extension and remove a duplicated CI check.
 
 ## 1.0.2
 

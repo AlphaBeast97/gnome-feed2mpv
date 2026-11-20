@@ -19,9 +19,10 @@ Bug reports, accessibility feedback, documentation fixes, and focused code chang
    gjs -m tests/mpris.js
    gjs -m tests/mpv-ipc.js
    gjs -m tests/clipboard-history.js
+   gjs -m tests/shell-daemon.js
    gjs -m tests/menu-utils.js
    python3 -m json.tool metadata.json >/dev/null
-   gnome-extensions pack . --extra-source=src --out-dir=/tmp
+   gnome-extensions pack . --extra-source=src --extra-source=LICENSE --out-dir=/tmp
    ```
 
 4. Open a pull request with the problem, the change, and the checks you ran.
