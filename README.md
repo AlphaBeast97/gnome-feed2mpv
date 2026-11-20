@@ -8,6 +8,10 @@
 
 A GNOME Shell extension for handing browser media to MPV from one GNOME menu. It runs in GNOME Shell, so you do not need to install a browser extension, native-messaging host, or separate helper for each browser. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
+<p align="center">
+  <video src="feed2mpv-30fps.mp4" width="720" muted autoplay loop playsinline aria-label="Feed2MPV in action"></video>
+</p>
+
 ## Why use MPV?
 
 This extension is for people who already use MPV and want web media in the same player setup as their local media: their playback configuration, key bindings, and scripts. Open the GNOME menu to choose a browser session, then play or queue it in MPV, continue from the reported position, or use audio-only playback. MPV and `yt-dlp` are required for streaming-site playback. The extension starts MPV itself; there is no browser-side extension or native-messaging helper to install and configure.
