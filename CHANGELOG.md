@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Explain that the GNOME Shell extension launches MPV directly and does not need a separate browser helper.
+
 ## 1.0.2
 
 - Rename the project and extension to GNOME Feed2MPV.

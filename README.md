@@ -2,11 +2,11 @@
 
 [![Checks](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml/badge.svg)](https://github.com/alphabeast97/gnome-feed2mpv/actions/workflows/checks.yml)
 
-A GNOME Shell extension for finding browser media and opening it in MPV. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
+A GNOME Shell extension for handing browser media to MPV from one GNOME menu. It runs in GNOME Shell, so you do not need to install a browser extension, native-messaging host, or separate helper for each browser. The panel indicator stays icon-only. Open it to choose a detected player, a recent copied video link, or a playback action.
 
 ## Why use MPV?
 
-This extension is for people who already prefer MPV and want browser videos to open there without hunting for and pasting URLs. MPV keeps your playback configuration, key bindings, and scripts; with `yt-dlp`, it can also play many streaming sites. The extension chooses among browser sessions, pauses the browser copy, carries over the reported position, and adds queue and audio-only controls. If you already prefer watching everything in your browser, you may not need it.
+This extension is for people who already use MPV and want web media in the same player setup as their local media: their playback configuration, key bindings, and scripts. Open the GNOME menu to choose a browser session, then play or queue it in MPV, continue from the reported position, or use audio-only playback. MPV and `yt-dlp` are required for streaming-site playback. The extension starts MPV itself; there is no browser-side extension or native-messaging helper to install and configure.
 
 ## What it does
 
@@ -22,7 +22,7 @@ Only URLs are kept by the session tracker, in memory, and the list resets when t
 
 ## Browser support
 
-Automatic detection requires a browser to publish an MPRIS media player. Linux has no standard API for a Shell extension to enumerate every browser's tabs, and browser MPRIS implementations vary. A browser that publishes no MPRIS player cannot be detected automatically.
+No browser add-on or native-messaging helper is required. Automatic detection uses MPRIS, so a browser must publish a media player and enough metadata for the extension to identify its URL. Linux has no standard API for a Shell extension to enumerate every browser's tabs, and browser MPRIS implementations vary. A browser that publishes no MPRIS player cannot be detected automatically.
 
 | Browser family | Detection path | Limit |
 | --- | --- | --- |
@@ -44,9 +44,11 @@ If MPRIS did not provide a title, the extension can request metadata for a copie
 
 - GNOME Shell 46–51
 - MPV on `PATH`
-- `yt-dlp` for YouTube and other sites that MPV cannot play directly
+- `yt-dlp` for streaming-site playback
 - A browser publishing MPRIS for automatic media detection
 - An internet connection to resolve a missing title for a YouTube link
+
+You do not need to install a separate browser extension, native-messaging host, or per-browser helper. The GNOME Shell extension launches MPV directly. Direct media files may play without `yt-dlp`; streaming-site playback requires it.
 
 Clipboard history tracking and playback control do not require a clipboard manager. Existing older history is optional and depends on whether a compatible local history service is installed.
 

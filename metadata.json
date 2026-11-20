@@ -1,7 +1,7 @@
 {
   "uuid": "gnome-feed2mpv@alphabeast97.github.io",
   "name": "GNOME Feed2MPV",
-  "description": "Choose browser media and copied links to play in MPV.",
+  "description": "Choose browser media and copied links in GNOME Shell and play them in MPV, without a browser helper.",
   "shell-version": ["46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/alphabeast97/gnome-feed2mpv"
 }
