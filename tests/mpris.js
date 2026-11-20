@@ -1,6 +1,6 @@
 import GLib from 'gi://GLib';
 
-import {mediaUrl, parseMprisProperties, youtubeUrl} from '../mpris.js';
+import {mediaUrl, MprisMonitor, parseMprisProperties, youtubeUrl} from '../mpris.js';
 
 function assertEqual(actual, expected, name) {
     if (actual !== expected)
@@ -37,5 +37,33 @@ assertEqual(video.url, 'https://www.youtube.com/watch?v=abcdefghijk', 'thumbnail
 assertEqual(video.title, 'Example video', 'MPRIS title');
 assertEqual(video.status, 'Playing', 'MPRIS playback status');
 assertEqual(video.position, 123, 'MPRIS position conversion');
+const webpVideo = parseMprisProperties({
+    Metadata: new GLib.Variant('a{sv}', {
+        'mpris:artUrl': new GLib.Variant('s', 'https://i.ytimg.com/vi_webp/lmnopqrstuv/hqdefault.webp'),
+    }),
+}, 'org.mpris.MediaPlayer2.brave');
+assertEqual(webpVideo.url, 'https://www.youtube.com/watch?v=lmnopqrstuv', 'WebP thumbnail URL fallback');
+
+let recentVideos = [];
+const monitor = new MprisMonitor(videos => recentVideos = videos);
+monitor._remember({
+    busName: 'org.mpris.MediaPlayer2.brave',
+    url: 'https://www.youtube.com/watch?v=abcdefghijk',
+    title: 'First video',
+    status: 'Playing',
+    position: 10,
+});
+monitor._remember({
+    busName: 'org.mpris.MediaPlayer2.brave',
+    url: 'https://www.youtube.com/watch?v=lmnopqrstuv',
+    title: 'Second video',
+    status: 'Playing',
+    position: 20,
+});
+monitor._publishVideos();
+assertEqual(recentVideos.length, 2, 'recent items from one browser player');
+assertEqual(recentVideos[0].current, true, 'latest browser item is marked current');
+assertEqual(recentVideos[1].status, 'Previous', 'older browser item is retained as recent');
+monitor.destroy();
 
 print('MPRIS parsing checks passed');
