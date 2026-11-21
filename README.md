@@ -31,7 +31,11 @@ Only URLs are kept by the session tracker, in memory, and the list resets when t
 
 ## Clipboard access
 
-Reading copied media links is the extension's core feature, so it calls `St.Clipboard.get_default()` while enabled; GNOME Shell offers no other API for the clipboard selection. The access is read-only: the extension never writes to the clipboard, never polls it on a timer, and reads text only when the clipboard selection owner changes and when a menu action needs the current clipboard (**Open Current Clipboard URL**, and the fallback used when no browser media is selected). Copied text is reduced to a URL, and only links that pass the offline media check are kept in memory for as long as the extension is enabled.
+Reading copied media links is the extension's core feature. It uses `St.Clipboard` to read text and `Meta.Selection`'s `owner-changed` signal to detect when the clipboard selection changes. The access is read-only: the extension never writes to the clipboard, never polls it on a timer, and reads text only when the selection owner changes and when a menu action needs the current clipboard (**Open Current Clipboard URL**, and the fallback used when no browser media is selected). Copied text is reduced to a URL, and only links that pass the offline media check are kept in memory. The history holds at most five links, exists only in memory, and is emptied when the extension is disabled.
+
+### Network request
+
+When the menu opens, copied links that have no known title are sent to YouTube's oEmbed endpoint to fetch one. The extension makes a `GET` request to `https://www.youtube.com/oembed` whose query contains only the video URL derived from the copied link (`https://www.youtube.com/watch?v=<id>`) and `format=json`. The request sets no headers of its own and carries no cookies, account credentials, or other clipboard contents, and no other host is contacted. Copied links that are not YouTube URLs keep their host-name label and are never sent anywhere. The same lookup can run once when the extension is enabled, for older links supplied by a compatible history service.
 
 ## Browser support
 
@@ -47,7 +51,7 @@ When automatic detection is unavailable, copy a page URL while the extension is 
 
 ### YouTube title lookup
 
-If MPRIS did not provide a title, the extension can request metadata for a copied YouTube URL from YouTube's oEmbed endpoint. The lookup uses the exact video URL, so it does not guess among search results. It may not return a title for private, unavailable, or restricted videos. The request is made when the extension menu is used and is limited to YouTube URLs. [YouTube oEmbed endpoint](https://www.youtube.com/oembed)
+If MPRIS did not provide a title, the extension can request metadata for a copied YouTube URL from YouTube's oEmbed endpoint. The lookup sends the video's canonical watch URL rather than running a search, so it does not guess among results. It may not return a title for private, unavailable, or restricted videos. The request is a plain `GET` to `www.youtube.com` limited to YouTube URLs; it includes no cookies or credentials. [YouTube oEmbed endpoint](https://www.youtube.com/oembed)
 
 ## GNOME Shell compatibility
 

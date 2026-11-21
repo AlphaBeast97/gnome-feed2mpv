@@ -44,9 +44,12 @@ export default class Feed2MpvExtension extends Extension {
         this._pendingPlaybackError = '';
         this._lastPlaybackErrorAt = 0;
         this._menuSignature = '';
-        // Reading copied links is the main feature. St.Clipboard is the only
-        // Shell API for the clipboard selection; access is read-only and is
-        // limited to selection changes and explicit menu actions.
+        // Reading copied links is the main feature: St.Clipboard supplies the
+        // clipboard text, and ClipboardHistory watches Meta.Selection's
+        // owner-changed signal to know when to read it. Access is read-only
+        // and happens only on selection changes and explicit menu actions.
+        // Copied YouTube links may be sent to YouTube's oEmbed endpoint for a
+        // title when the menu opens; nothing else from the clipboard is sent.
         this._clipboard = St.Clipboard.get_default();
         this._videoTitleResolver = new VideoTitleResolver();
         this._clipboardHistory = new ClipboardHistory(
