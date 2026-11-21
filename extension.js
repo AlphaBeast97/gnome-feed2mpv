@@ -44,6 +44,9 @@ export default class Feed2MpvExtension extends Extension {
         this._pendingPlaybackError = '';
         this._lastPlaybackErrorAt = 0;
         this._menuSignature = '';
+        // Reading copied links is the main feature. St.Clipboard is the only
+        // Shell API for the clipboard selection; access is read-only and is
+        // limited to selection changes and explicit menu actions.
         this._clipboard = St.Clipboard.get_default();
         this._videoTitleResolver = new VideoTitleResolver();
         this._clipboardHistory = new ClipboardHistory(
@@ -104,6 +107,10 @@ export default class Feed2MpvExtension extends Extension {
                 this._indicator.menu.disconnect(this._menuSignal);
             if (this._menuClosedSignal)
                 this._indicator.menu.disconnect(this._menuClosedSignal);
+            this._icon?.destroy();
+            this._icon = null;
+            this._statusItem?.destroy();
+            this._statusItem = null;
             this._indicator.menu.removeAll();
             this._indicator.destroy();
         }
@@ -112,8 +119,6 @@ export default class Feed2MpvExtension extends Extension {
         this._clipboardHistory = null;
         this._videoTitleResolver = null;
         this._indicator = null;
-        this._icon = null;
-        this._statusItem = null;
         this._clipboard = null;
         this._videos = [];
         this._clipboardItems = [];

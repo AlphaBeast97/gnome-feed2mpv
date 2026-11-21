@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- Destroy the panel icon and status row explicitly in `disable()` to satisfy extension review cleanup checks.
+- Document the extension's read-only clipboard access for extension reviewers.
+
 ## 1.1.0
 
 - Guard asynchronous MPV and clipboard callbacks so nothing runs after the extension is disabled.

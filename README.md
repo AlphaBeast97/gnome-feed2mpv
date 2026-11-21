@@ -29,6 +29,10 @@ This extension is for people who already use MPV and want web media in the same 
 
 Only URLs are kept by the session tracker, in memory, and the list resets when the extension is disabled or GNOME Shell restarts. The optional history service can provide links copied before the extension was enabled. The extension does not read or import the private databases of individual clipboard manager applications, so it does not need separate integrations for each one.
 
+## Clipboard access
+
+Reading copied media links is the extension's core feature, so it calls `St.Clipboard.get_default()` while enabled; GNOME Shell offers no other API for the clipboard selection. The access is read-only: the extension never writes to the clipboard, never polls it on a timer, and reads text only when the clipboard selection owner changes and when a menu action needs the current clipboard (**Open Current Clipboard URL**, and the fallback used when no browser media is selected). Copied text is reduced to a URL, and only links that pass the offline media check are kept in memory for as long as the extension is enabled.
+
 ## Browser support
 
 No browser add-on or native-messaging helper is required. Automatic detection uses MPRIS, so a browser must publish a media player and enough metadata for the extension to identify its URL. Linux has no standard API for a Shell extension to enumerate every browser's tabs, and browser MPRIS implementations vary. A browser that publishes no MPRIS player cannot be detected automatically.
