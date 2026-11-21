@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Correct the clipboard explanation: text is read through `St.Clipboard` and changes are detected through `Meta.Selection`'s `owner-changed` signal, rather than through a single Shell API.
+- Disclose the title lookup's network request in the README: when the menu opens, copied YouTube links without a known title are sent to `www.youtube.com/oembed`, with no cookies, credentials, or other clipboard contents.
+
 ## 1.1.1
 
 - Destroy the panel icon and status row explicitly in `disable()` to satisfy extension review cleanup checks.
