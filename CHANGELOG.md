@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.3
+## 1.1.4
 
 - Remove redundant state guards where initialization and teardown already guarantee the required objects.
 - Drop an unreachable playback-status label and simplify clipboard URL handling.
