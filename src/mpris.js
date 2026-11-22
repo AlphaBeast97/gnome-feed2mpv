@@ -36,41 +36,44 @@ export function parseMprisProperties(properties, busName) {
     };
 }
 
-function youtubeUrl(value) {
-    if (typeof value !== 'string' || !value)
+function youtubeUrlFromUri(parsed) {
+    if (parsed.get_scheme() !== 'http' && parsed.get_scheme() !== 'https')
         return null;
-    try {
-        const parsed = GLib.Uri.parse(value, GLib.UriFlags.NONE);
-        if (parsed.get_scheme() !== 'http' && parsed.get_scheme() !== 'https')
-            return null;
-        const host = parsed.get_host()?.toLowerCase().replace(/^www\./, '');
-        if (host === 'youtu.be') {
-            const id = parsed.get_path().split('/').filter(Boolean)[0];
-            return validId(id) ? `https://www.youtube.com/watch?v=${id}` : null;
-        }
-        if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
-            const params = GLib.Uri.parse_params(parsed.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
-            const id = params.v;
-            if (validId(id))
-                return `https://www.youtube.com/watch?v=${id}`;
-            const match = parsed.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/);
-            return match ? `https://www.youtube.com/watch?v=${match[1]}` : null;
-        }
-    } catch (_) {
-        return null;
+    const host = parsed.get_host()?.toLowerCase().replace(/^www\./, '');
+    if (host === 'youtu.be') {
+        const id = parsed.get_path().split('/').filter(Boolean)[0];
+        return validId(id) ? `https://www.youtube.com/watch?v=${id}` : null;
+    }
+    if (host === 'youtube.com' || host?.endsWith('.youtube.com')) {
+        const params = GLib.Uri.parse_params(parsed.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
+        const id = params.v;
+        if (validId(id))
+            return `https://www.youtube.com/watch?v=${id}`;
+        const match = parsed.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/);
+        return match ? `https://www.youtube.com/watch?v=${match[1]}` : null;
     }
     return null;
 }
 
+function youtubeUrl(value) {
+    if (typeof value !== 'string' || !value)
+        return null;
+    try {
+        return youtubeUrlFromUri(GLib.Uri.parse(value, GLib.UriFlags.NONE));
+    } catch (_) {
+        return null;
+    }
+}
+
 function mediaUrl(value) {
-    const youtube = youtubeUrl(value);
-    if (youtube)
-        return youtube;
     if (typeof value !== 'string')
         return null;
     try {
         const normalized = value.trim();
         const parsed = GLib.Uri.parse(normalized, GLib.UriFlags.NONE);
+        const youtube = youtubeUrlFromUri(parsed);
+        if (youtube)
+            return youtube;
         if ((parsed.get_scheme() === 'http' || parsed.get_scheme() === 'https') && parsed.get_host())
             return normalized;
     } catch (_) {

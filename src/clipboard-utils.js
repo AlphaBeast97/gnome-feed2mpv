@@ -30,28 +30,31 @@ export function urlFromText(text) {
     return mediaUrl(match[0].replace(/[),.;!?\]}]+$/, ''));
 }
 
+function youtubeVideoIdFromUri(uri) {
+    const host = uri.get_host()?.toLowerCase().replace(/^www\./, '');
+    if (host === 'youtu.be') {
+        const id = uri.get_path().split('/').filter(Boolean)[0];
+        return validYouTubeId(id) ? id : null;
+    }
+    if (host !== 'youtube.com' && !host?.endsWith('.youtube.com'))
+        return null;
+    const params = GLib.Uri.parse_params(uri.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
+    const id = params.v ?? uri.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/)?.[1];
+    return validYouTubeId(id) ? id : null;
+}
+
 export function youtubeVideoId(url) {
     try {
-        const uri = GLib.Uri.parse(url, GLib.UriFlags.NONE);
-        const host = uri.get_host()?.toLowerCase().replace(/^www\./, '');
-        if (host === 'youtu.be') {
-            const id = uri.get_path().split('/').filter(Boolean)[0];
-            return validYouTubeId(id) ? id : null;
-        }
-        if (host !== 'youtube.com' && !host?.endsWith('.youtube.com'))
-            return null;
-        const params = GLib.Uri.parse_params(uri.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
-        const id = params.v ?? uri.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/)?.[1];
-        return validYouTubeId(id) ? id : null;
+        return youtubeVideoIdFromUri(GLib.Uri.parse(url, GLib.UriFlags.NONE));
     } catch (_) {
         return null;
     }
 }
 
 export function videoFromUrl(url, copiedAt = Date.now()) {
-    const host = GLib.Uri.parse(url, GLib.UriFlags.NONE).get_host()?.replace(/^www\./, '')
-        ?? 'Copied link';
-    const id = youtubeVideoId(url);
+    const uri = GLib.Uri.parse(url, GLib.UriFlags.NONE);
+    const host = uri.get_host()?.replace(/^www\./, '') ?? 'Copied link';
+    const id = youtubeVideoIdFromUri(uri);
     return {
         url,
         title: id ? `YouTube video (${id})` : host,
@@ -71,7 +74,7 @@ export function isStreamableUrl(url) {
         const host = uri.get_host()?.toLowerCase().replace(/^www\./, '');
         if (!host)
             return false;
-        if (youtubeVideoId(url))
+        if (youtubeVideoIdFromUri(uri))
             return true;
         if (STREAMING_HOSTS.some(domain => host === domain || host.endsWith(`.${domain}`)))
             return true;
