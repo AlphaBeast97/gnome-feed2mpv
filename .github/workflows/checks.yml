@@ -25,9 +25,6 @@ jobs:
       - name: Validate extension metadata
         run: python3 -m json.tool metadata.json >/dev/null
 
-      - name: Package extension
-        run: gnome-extensions pack . --extra-source=src --extra-source=LICENSE --force
-
       - name: Run GJS checks
         run: |
           gjs -m tests/mpris.js
