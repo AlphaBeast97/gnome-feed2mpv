@@ -119,13 +119,10 @@ export function readClipboardUrl(clipboard, callback) {
             callback(null);
             return;
         }
-        try {
-            const url = mediaUrl(text.trim());
-            if (url) {
-                callback({url, title: 'Clipboard video', position: 0, status: 'Stopped'});
-                return;
-            }
-        } catch (_) {
+        const url = mediaUrl(text.trim());
+        if (url) {
+            callback({url, title: 'Clipboard video', position: 0, status: 'Stopped'});
+            return;
         }
         callback(null);
     });

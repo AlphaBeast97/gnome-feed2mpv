@@ -117,8 +117,6 @@ export class MpvIpcMonitor {
     }
 
     _sendCommands(commands) {
-        if (!this._connection)
-            return;
         const payload = commands.map(command => JSON.stringify({command}) + '\n').join('');
         const bytes = new TextEncoder().encode(payload);
         this._connection.get_output_stream().write_all_async(
@@ -244,8 +242,6 @@ export class MpvIpcMonitor {
             this._socketMonitor = null;
             return;
         }
-        if (!this._socketMonitor)
-            return;
         const basename = socketFile.get_basename();
         this._socketMonitorSignal = this._socketMonitor.connect('changed', (_monitor, file) => {
             if (!this._destroyed && file.get_basename() === basename) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- Remove redundant state guards where initialization and teardown already guarantee the required objects.
+- Drop an unreachable playback-status label and simplify clipboard URL handling.
+
 ## 1.1.2
 
 - Correct the clipboard explanation: text is read through `St.Clipboard` and changes are detected through `Meta.Selection`'s `owner-changed` signal, rather than through a single Shell API.

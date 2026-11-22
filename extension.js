@@ -209,11 +209,8 @@ export default class Feed2MpvExtension extends Extension {
     }
 
     _addVideo(video, availability) {
-        const playing = video.current && video.status === 'Playing' && availability !== 'Playing'
-            ? '  ·  Playing'
-            : '';
         const row = new PopupMenu.PopupMenuItem(
-            `${menuTitle(video.title)}  ·  ${this._playerName(video.busName)}  ·  ${availability}${playing}`);
+            `${menuTitle(video.title)}  ·  ${this._playerName(video.busName)}  ·  ${availability}`);
         row.accessible_name = `${video.title}, ${this._playerName(video.busName)}, ${availability}`;
         row.connect('activate', () => {
             this._selectedVideo = video;
@@ -243,7 +240,7 @@ export default class Feed2MpvExtension extends Extension {
     }
 
     _playVideo(video, options = {}) {
-        if (this._destroyed || !this._mpvMonitor)
+        if (this._destroyed)
             return;
         this._clearPlaybackErrorTimer();
         this._lastPlaybackErrorAt = 0;
@@ -258,7 +255,7 @@ export default class Feed2MpvExtension extends Extension {
     }
 
     _queueVideo(video) {
-        if (this._destroyed || !this._mpvMonitor)
+        if (this._destroyed)
             return;
         this._clearPlaybackErrorTimer();
         this._lastPlaybackErrorAt = 0;
@@ -322,7 +319,7 @@ export default class Feed2MpvExtension extends Extension {
     }
 
     _openClipboard(onVideo) {
-        if (this._destroyed || !this._clipboard)
+        if (this._destroyed)
             return;
         readClipboardUrl(this._clipboard, video => {
             if (this._destroyed)
@@ -335,7 +332,7 @@ export default class Feed2MpvExtension extends Extension {
     }
 
     _refreshClipboardHistory() {
-        if (this._destroyed || !this._clipboardHistory)
+        if (this._destroyed)
             return;
         this._clipboardHistory.refresh(videos => {
             if (this._destroyed)
