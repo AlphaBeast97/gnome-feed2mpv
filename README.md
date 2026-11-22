@@ -89,10 +89,7 @@ For a development install, run:
 ./scripts/install.sh
 ```
 
-The script packages the extension, removes the pre-rename
-`youtube-to-mpv@alphabeast97.github.io` install if it is still present, then
-installs and enables this UUID. That cleanup matters: after the 1.0.2 rename an
-older install keeps running beside this one as a second panel icon.
+The script packages the extension, then installs and enables this UUID.
 
 To run the steps by hand, start from the repository root:
 

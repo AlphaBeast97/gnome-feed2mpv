@@ -13,8 +13,6 @@ import {openInMpv, queueInMpv, readClipboardUrl} from './src/player.js';
 import {VideoTitleResolver} from './src/video-title.js';
 import {menuTitle} from './src/menu-utils.js';
 
-const LEGACY_UUID = 'youtube-to-mpv@alphabeast97.github.io';
-
 const PLAYER_NAMES = {
     brave: 'Brave',
     chrome: 'Chrome',
@@ -67,7 +65,6 @@ export default class Feed2MpvExtension extends Extension {
         this._indicator.add_child(this._icon);
         this._indicator.accessible_name = this.metadata.name;
         Main.panel.addToStatusArea(this.uuid, this._indicator);
-        this._notifyIfLegacyInstalled();
 
         this._mpvMonitor = new MpvIpcMonitor(state => {
             this._mpvState = state;
@@ -133,13 +130,6 @@ export default class Feed2MpvExtension extends Extension {
         this._menuSignature = '';
         this._playbackStarted = false;
         this._lastPlaybackErrorAt = 0;
-    }
-
-    _notifyIfLegacyInstalled() {
-        if (!Main.extensionManager?.lookup?.(LEGACY_UUID))
-            return;
-        Main.notify(this.metadata.name,
-            'The pre-rename "YouTube to MPV" extension is still installed and runs a second panel icon. Remove it in the Extensions app.');
     }
 
     _buildMenu() {
