@@ -1,6 +1,7 @@
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 
+import {mediaUrl} from './mpris.js';
 import {ShellHistoryProvider} from './history-providers/shell-daemon.js';
 import {isStreamableUrl, urlFromText, videoFromUrl} from './clipboard-utils.js';
 
@@ -74,4 +75,19 @@ export class ClipboardHistory {
         this._onChanged = null;
         this._items = [];
     }
+}
+
+export function readClipboardUrl(clipboard, callback) {
+    clipboard.get_text(St.ClipboardType.CLIPBOARD, (_clipboard, text) => {
+        if (!text) {
+            callback(null);
+            return;
+        }
+        const url = mediaUrl(text.trim());
+        if (url) {
+            callback({url, title: 'Clipboard video', position: 0, status: 'Stopped'});
+            return;
+        }
+        callback(null);
+    });
 }

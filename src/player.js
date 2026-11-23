@@ -1,8 +1,6 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import St from 'gi://St';
 
-import {mediaUrl} from './mpris.js';
 import {MPV_SOCKET} from './mpv-ipc.js';
 
 function describeFailure(lines) {
@@ -16,7 +14,7 @@ function describeFailure(lines) {
     return text.length > 160 ? `${text.slice(0, 157)}…` : text;
 }
 
-function launch(args, onError) {
+function launch(args, onError, cancellable = null) {
     let process;
     try {
         process = Gio.Subprocess.new(args,
@@ -28,7 +26,9 @@ function launch(args, onError) {
     const lines = [];
     const stdout = Gio.DataInputStream.new(process.get_stdout_pipe());
     const readLine = () => {
-        stdout.read_line_async(GLib.PRIORITY_DEFAULT, null, (stream, result) => {
+        stdout.read_line_async(GLib.PRIORITY_DEFAULT, cancellable, (stream, result) => {
+            if (cancellable?.is_cancelled())
+                return;
             let line = null;
             try {
                 [line] = stream.read_line_finish_utf8(result);
@@ -47,7 +47,9 @@ function launch(args, onError) {
     };
     readLine();
 
-    process.wait_async(null, (subprocess, result) => {
+    process.wait_async(cancellable, (subprocess, result) => {
+        if (cancellable?.is_cancelled())
+            return;
         let successful = false;
         try {
             subprocess.wait_finish(result);
@@ -79,16 +81,18 @@ function argumentsFor(video, {audioOnly = false} = {}) {
     return args;
 }
 
-export function openInMpv(video, options = {}, onError = () => {}) {
+export function openInMpv(video, options = {}, onError = () => {}, cancellable = null) {
     pauseBrowser(video);
-    return launch(argumentsFor(video, options), onError);
+    return launch(argumentsFor(video, options), onError, cancellable);
 }
 
-export function queueInMpv(video, onUnavailable, onQueued = () => {}) {
+export function queueInMpv(video, onUnavailable, onQueued = () => {}, cancellable = null) {
     pauseBrowser(video);
     const client = new Gio.SocketClient();
     const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
-    client.connect_async(address, null, (socketClient, result) => {
+    client.connect_async(address, cancellable, (socketClient, result) => {
+        if (cancellable?.is_cancelled())
+            return;
         let connection;
         try {
             connection = socketClient.connect_finish(result);
@@ -100,7 +104,11 @@ export function queueInMpv(video, onUnavailable, onQueued = () => {}) {
         const payload = JSON.stringify({command: ['loadfile', video.url, 'append-play']}) + '\n';
         const bytes = new TextEncoder().encode(payload);
         connection.get_output_stream().write_all_async(
-            bytes, GLib.PRIORITY_DEFAULT, null, (stream, writeResult) => {
+            bytes, GLib.PRIORITY_DEFAULT, cancellable, (stream, writeResult) => {
+                if (cancellable?.is_cancelled()) {
+                    connection.close(null);
+                    return;
+                }
                 try {
                     stream.write_all_finish(writeResult);
                     connection.close(null);
@@ -110,20 +118,5 @@ export function queueInMpv(video, onUnavailable, onQueued = () => {}) {
                     onUnavailable();
                 }
             });
-    });
-}
-
-export function readClipboardUrl(clipboard, callback) {
-    clipboard.get_text(St.ClipboardType.CLIPBOARD, (_clipboard, text) => {
-        if (!text) {
-            callback(null);
-            return;
-        }
-        const url = mediaUrl(text.trim());
-        if (url) {
-            callback({url, title: 'Clipboard video', position: 0, status: 'Stopped'});
-            return;
-        }
-        callback(null);
     });
 }

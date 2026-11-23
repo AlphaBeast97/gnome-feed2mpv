@@ -6,10 +6,10 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-import {ClipboardHistory} from './src/clipboard-history.js';
+import {ClipboardHistory, readClipboardUrl} from './src/clipboard-history.js';
 import {MprisMonitor} from './src/mpris.js';
 import {MpvIpcMonitor} from './src/mpv-ipc.js';
-import {openInMpv, queueInMpv, readClipboardUrl} from './src/player.js';
+import {openInMpv, queueInMpv} from './src/player.js';
 import {VideoTitleResolver} from './src/video-title.js';
 import {menuTitle} from './src/menu-utils.js';
 
