@@ -35,7 +35,7 @@ Reading copied media links is the extension's core feature. It uses `St.Clipboar
 
 ### Network request
 
-When the menu opens, copied links that have no known title are sent to YouTube's oEmbed endpoint to fetch one. The extension makes a `GET` request to `https://www.youtube.com/oembed` whose query contains only the video URL derived from the copied link (`https://www.youtube.com/watch?v=<id>`) and `format=json`. The request sets no headers of its own and carries no cookies, account credentials, or other clipboard contents, and no other host is contacted. Copied links that are not YouTube URLs keep their host-name label and are never sent anywhere. The same lookup can run once when the extension is enabled, for older links supplied by a compatible history service.
+When the menu opens, copied links that have no known title are sent to YouTube's oEmbed endpoint to fetch one. The extension makes a `GET` request to `https://www.youtube.com/oembed` whose query contains only the video URL derived from the copied link (`https://www.youtube.com/watch?v=<id>`) and `format=json`. The request sets no headers of its own and carries no cookies, account credentials, or other clipboard contents, and no other host is contacted. Copied links that are not YouTube URLs keep their host-name label and are never sent anywhere. This lookup does not run during extension startup.
 
 ## Browser support
 

@@ -81,7 +81,7 @@ export default class Feed2MpvExtension extends Extension {
         this._menuSignal = this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
             this._menuOpen = isOpen;
             if (isOpen)
-                this._refreshClipboardHistory();
+                this._refreshClipboardHistory(true);
         });
         this._menuClosedSignal = this._indicator.menu.connect('menu-closed', () => {
             if (this._menuDirty)
@@ -89,7 +89,7 @@ export default class Feed2MpvExtension extends Extension {
         });
 
         this._buildMenu();
-        this._refreshClipboardHistory();
+        this._refreshClipboardHistory(false);
         this._mpvMonitor.start();
         this._monitor.start();
         this._updateUi();
@@ -331,14 +331,14 @@ export default class Feed2MpvExtension extends Extension {
         });
     }
 
-    _refreshClipboardHistory() {
+    _refreshClipboardHistory(resolveMissingTitles = false) {
         if (this._destroyed)
             return;
         this._clipboardHistory.refresh(videos => {
             if (this._destroyed)
                 return;
             this._clipboardItems = videos;
-            this._enrichClipboardTitles(true);
+            this._enrichClipboardTitles(resolveMissingTitles);
             this._updateUi();
         });
     }
