@@ -98,16 +98,16 @@ export default class Feed2MpvExtension extends Extension {
     disable() {
         this._destroyed = true;
         this._clearPlaybackErrorTimer();
-        this._monitor?.destroy();
-        this._mpvMonitor?.destroy();
-        this._clipboardHistory?.destroy();
-        this._videoTitleResolver?.destroy();
+        this._monitor.destroy();
+        this._mpvMonitor.destroy();
+        this._clipboardHistory.destroy();
+        this._videoTitleResolver.destroy();
         if (this._indicator) {
             if (this._menuSignal)
                 this._indicator.menu.disconnect(this._menuSignal);
             if (this._menuClosedSignal)
                 this._indicator.menu.disconnect(this._menuClosedSignal);
-            this._icon?.destroy();
+            this._icon.destroy();
             this._icon = null;
             this._statusItem?.destroy();
             this._statusItem = null;

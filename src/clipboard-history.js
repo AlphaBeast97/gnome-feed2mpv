@@ -71,12 +71,13 @@ export class ClipboardHistory {
     destroy() {
         this._destroyed = true;
         this._captureGeneration++;
-        if (this._selection && this._ownerChanged)
-            this._selection.disconnect(this._ownerChanged);
+        this._selection.disconnect(this._ownerChanged);
         this._selection = null;
         this._ownerChanged = 0;
         this._provider.destroy();
+        this._provider = null;
         this._clipboard = null;
+        this._onChanged = null;
         this._items = [];
     }
 }

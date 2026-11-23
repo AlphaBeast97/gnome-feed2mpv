@@ -6,7 +6,7 @@ const MAX_RETRIES = 3;
 const LOAD_TIMEOUT_SECONDS = 30;
 
 export const MPV_SOCKET = GLib.build_filenamev([
-    GLib.get_user_runtime_dir() || GLib.get_tmp_dir(),
+    GLib.get_user_runtime_dir(),
     'mpvsocket',
 ]);
 
@@ -252,7 +252,7 @@ export class MpvIpcMonitor {
     }
 
     _stopWatchingSocketDirectory() {
-        if (this._socketMonitor && this._socketMonitorSignal)
+        if (this._socketMonitorSignal)
             this._socketMonitor.disconnect(this._socketMonitorSignal);
         this._socketMonitor?.cancel();
         this._socketMonitor = null;
