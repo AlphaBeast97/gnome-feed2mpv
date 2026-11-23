@@ -24,12 +24,11 @@ export class VideoTitleResolver {
         this._cache = new Map();
         this._failures = new Map();
         this._pending = new Map();
-        this._destroyed = false;
     }
 
     resolve(url, callback) {
         const id = youtubeVideoId(url);
-        if (!id || this._destroyed)
+        if (!id)
             return;
         if (this._cache.has(id)) {
             callback(this._cache.get(id));
@@ -66,7 +65,7 @@ export class VideoTitleResolver {
 
                 const current = this._pending.get(id);
                 this._pending.delete(id);
-                if (this._destroyed || !current)
+                if (!current)
                     return;
                 if (title)
                     this._cache.set(id, title);
@@ -78,7 +77,6 @@ export class VideoTitleResolver {
     }
 
     destroy() {
-        this._destroyed = true;
         for (const {cancellable} of this._pending.values())
             cancellable.cancel();
         this._pending.clear();

@@ -35,19 +35,19 @@ export function parseItems(serialized) {
 
 export class ShellHistoryProvider {
     constructor() {
-        this._destroyed = false;
         this._proxy = null;
         this._generation = 0;
+        const generation = this._generation;
         const Proxy = Gio.DBusProxy.makeProxyWrapper(PROXY_XML);
         new Proxy(Gio.DBus.session, BUS_NAME, OBJECT_PATH, (proxy, error) => {
-            if (!this._destroyed && !error)
+            if (generation === this._generation && !error)
                 this._proxy = proxy;
         });
     }
 
     refresh(callback) {
         const generation = ++this._generation;
-        if (this._destroyed || !this._proxy) {
+        if (!this._proxy) {
             callback([]);
             return;
         }
@@ -56,7 +56,7 @@ export class ShellHistoryProvider {
         const videos = [];
         const seen = new Set();
         const readNext = index => {
-            if (this._destroyed || generation !== this._generation)
+            if (generation !== this._generation)
                 return;
             if (index >= items.length || videos.length >= RESULT_LIMIT) {
                 callback(videos);
@@ -66,7 +66,7 @@ export class ShellHistoryProvider {
             const item = items[index];
             const previewUrl = urlFromText(item.preview);
             this._proxy.GetTextRemote(item.id, (result, error) => {
-                if (this._destroyed || generation !== this._generation)
+                if (generation !== this._generation)
                     return;
                 const url = error ? previewUrl : urlFromText(result?.[0]) ?? previewUrl;
                 if (url && isStreamableUrl(url) && !seen.has(url)) {
@@ -82,7 +82,6 @@ export class ShellHistoryProvider {
     }
 
     destroy() {
-        this._destroyed = true;
         this._generation++;
         this._proxy = null;
     }

@@ -102,7 +102,6 @@ export class MprisMonitor {
         this._recent = new Map();
         this._busNames = new Set();
         this._owners = new Map();
-        this._destroyed = false;
         this._initialScanComplete = false;
         this._initialScanPending = 0;
     }
@@ -140,16 +139,13 @@ export class MprisMonitor {
     }
 
     destroy() {
-        if (this._destroyed)
-            return;
-        this._destroyed = true;
         this._cancellable.cancel();
-        for (const id of this._subscriptions)
-            Gio.DBus.session.signal_unsubscribe(id);
-        this._subscriptions = [];
         for (const id of this._refreshSources.values())
             GLib.Source.remove(id);
         this._refreshSources.clear();
+        for (const id of this._subscriptions)
+            Gio.DBus.session.signal_unsubscribe(id);
+        this._subscriptions = [];
         this._recent.clear();
         this._busNames.clear();
         this._owners.clear();
@@ -162,7 +158,7 @@ export class MprisMonitor {
             'org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus',
             'ListNames', null, new GLib.VariantType('(as)'), Gio.DBusCallFlags.NONE,
             3000, this._cancellable, (connection, result) => {
-                if (this._destroyed)
+                if (this._cancellable.is_cancelled())
                     return;
                 try {
                     const [names] = connection.call_finish(result).deepUnpack();
@@ -192,7 +188,7 @@ export class MprisMonitor {
     }
 
     _finishInitialScan() {
-        if (this._initialScanComplete || this._destroyed)
+        if (this._initialScanComplete || this._cancellable.is_cancelled())
             return;
         this._initialScanComplete = true;
         this._onInitialScanComplete?.();
@@ -204,7 +200,7 @@ export class MprisMonitor {
             'GetNameOwner', new GLib.Variant('(s)', [busName]),
             new GLib.VariantType('(s)'), Gio.DBusCallFlags.NONE, 1000,
             this._cancellable, (connection, result) => {
-                if (this._destroyed || !this._busNames.has(busName))
+                if (this._cancellable.is_cancelled() || !this._busNames.has(busName))
                     return;
                 try {
                     const [owner] = connection.call_finish(result).deepUnpack();
@@ -215,7 +211,7 @@ export class MprisMonitor {
     }
 
     _scheduleRefresh(busName) {
-        if (this._destroyed || this._refreshSources.has(busName))
+        if (this._cancellable.is_cancelled() || this._refreshSources.has(busName))
             return;
         const id = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, PROPERTY_REFRESH_DELAY_MS, () => {
@@ -227,14 +223,14 @@ export class MprisMonitor {
     }
 
     _refresh(busName, callback = null) {
-        if (this._destroyed)
+        if (this._cancellable.is_cancelled())
             return;
         Gio.DBus.session.call(
             busName, OBJECT_PATH, 'org.freedesktop.DBus.Properties', 'GetAll',
             new GLib.Variant('(s)', ['org.mpris.MediaPlayer2.Player']),
             new GLib.VariantType('(a{sv})'), Gio.DBusCallFlags.NONE,
             1000, this._cancellable, (connection, result) => {
-                if (this._destroyed)
+                if (this._cancellable.is_cancelled())
                     return;
                 try {
                     const [properties] = connection.call_finish(result).deepUnpack();
@@ -253,7 +249,7 @@ export class MprisMonitor {
     }
 
     _publishVideos() {
-        if (this._destroyed)
+        if (this._cancellable.is_cancelled())
             return;
         const videos = [...this._recent.values()];
         videos.sort((a, b) => Number(b.current && b.status === 'Playing') - Number(a.current && a.status === 'Playing')

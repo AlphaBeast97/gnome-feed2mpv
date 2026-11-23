@@ -17,7 +17,7 @@ export class MpvIpcMonitor {
         this._loadSource = null;
         this._cancellable = new Gio.Cancellable();
         this._connection = null;
-        this._connecting = false;
+        this._connectAttempt = null;
         this._input = null;
         this._retrySource = 0;
         this._retryAttempts = 0;
@@ -27,7 +27,6 @@ export class MpvIpcMonitor {
         this._state = 'idle';
         this._idle = null;
         this._paused = null;
-        this._destroyed = false;
     }
 
     start() {
@@ -40,7 +39,7 @@ export class MpvIpcMonitor {
     }
 
     expectLoad(source = 'launch') {
-        if (this._destroyed)
+        if (this._cancellable.is_cancelled())
             return;
         this._loadSource = source;
         this._retryAttempts = 0;
@@ -72,14 +71,11 @@ export class MpvIpcMonitor {
     }
 
     destroy() {
-        if (this._destroyed)
-            return;
-        this._destroyed = true;
         this._cancellable.cancel();
         if (this._retrySource)
             GLib.Source.remove(this._retrySource);
         this._retrySource = 0;
-        this._connecting = false;
+        this._connectAttempt = null;
         this._stopWatchingSocketDirectory();
         this._clearLoadTimeout();
         this._connection?.close(null);
@@ -91,14 +87,17 @@ export class MpvIpcMonitor {
     }
 
     _connect() {
-        if (this._destroyed || this._connection || this._connecting)
+        if (this._cancellable.is_cancelled() || this._connection || this._connectAttempt)
             return;
-        this._connecting = true;
+        const attempt = {};
+        this._connectAttempt = attempt;
         const client = new Gio.SocketClient();
         const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
         client.connect_async(address, this._cancellable, (socketClient, result) => {
-            this._connecting = false;
-            if (this._destroyed)
+            if (this._connectAttempt !== attempt)
+                return;
+            this._connectAttempt = null;
+            if (this._cancellable.is_cancelled())
                 return;
             try {
                 this._connection = socketClient.connect_finish(result);
@@ -160,11 +159,11 @@ export class MpvIpcMonitor {
     }
 
     _readNextLine() {
-        if (this._destroyed || !this._input)
+        if (this._cancellable.is_cancelled() || !this._input)
             return;
         this._input.read_line_async(
             GLib.PRIORITY_DEFAULT, this._cancellable, (stream, result) => {
-                if (this._destroyed)
+                if (this._cancellable.is_cancelled())
                     return;
                 try {
                     const [line] = stream.read_line_finish_utf8(result);
@@ -244,7 +243,7 @@ export class MpvIpcMonitor {
         }
         const basename = socketFile.get_basename();
         this._socketMonitorSignal = this._socketMonitor.connect('changed', (_monitor, file) => {
-            if (!this._destroyed && file.get_basename() === basename) {
+            if (!this._cancellable.is_cancelled() && file.get_basename() === basename) {
                 this._retryAttempts = 0;
                 this._connect();
             }
@@ -260,7 +259,7 @@ export class MpvIpcMonitor {
     }
 
     _scheduleRetry() {
-        if (this._destroyed || this._retrySource || this._retryAttempts >= MAX_RETRIES)
+        if (this._cancellable.is_cancelled() || this._retrySource || this._retryAttempts >= MAX_RETRIES)
             return;
         this._retryAttempts++;
         this._retrySource = GLib.timeout_add_seconds(

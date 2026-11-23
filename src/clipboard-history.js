@@ -11,22 +11,19 @@ export class ClipboardHistory {
         this._clipboard = clipboard;
         this._onChanged = onChanged;
         this._items = [];
-        this._destroyed = false;
         this._captureGeneration = 0;
         this._selection = global.display.get_selection();
         this._ownerChanged = this._selection.connect('owner-changed', (_selection, type) => {
-            if (!this._destroyed && type === Meta.SelectionType.SELECTION_CLIPBOARD)
+            if (type === Meta.SelectionType.SELECTION_CLIPBOARD)
                 this._captureClipboard();
         });
         this._provider = new ShellHistoryProvider();
     }
 
     _captureClipboard() {
-        if (this._destroyed)
-            return;
         const generation = ++this._captureGeneration;
         this._clipboard.get_text(St.ClipboardType.CLIPBOARD, (_clipboard, text) => {
-            if (this._destroyed || generation !== this._captureGeneration)
+            if (generation !== this._captureGeneration)
                 return;
             const url = urlFromText(text);
             if (!url || !isStreamableUrl(url))
@@ -45,8 +42,6 @@ export class ClipboardHistory {
 
     refresh(callback) {
         this._provider.refresh(previous => {
-            if (this._destroyed)
-                return;
             const merged = new Map();
             for (const item of [...this._items, ...previous]) {
                 const old = merged.get(item.url);
@@ -69,7 +64,6 @@ export class ClipboardHistory {
     }
 
     destroy() {
-        this._destroyed = true;
         this._captureGeneration++;
         this._selection.disconnect(this._ownerChanged);
         this._selection = null;
