@@ -131,12 +131,13 @@ When an MPV launch fails, the extension shows a notification containing MPV's ow
 ## Project layout
 
 ```text
-extension.js                 GNOME Shell entry point, panel button, and menu
+extension.js                 GNOME Shell lifecycle and media orchestration
 metadata.json                Extension ID, description, and supported Shell versions
 src/
   clipboard-history.js       Manager-independent clipboard URL tracking
   clipboard-utils.js         URL extraction, media labels, and streamable-link filtering
   history-providers/         Optional local history service adapters
+  media-menu.js              Panel button and popup menu rendering
   mpris.js                   Browser media discovery and recent sessions
   mpv-ipc.js                 MPV state and playback controls
   player.js                  MPV launching with error reporting, queueing, and current clipboard action
