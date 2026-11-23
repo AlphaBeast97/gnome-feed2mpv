@@ -99,7 +99,6 @@ export class MprisMonitor {
         this._cancellable = new Gio.Cancellable();
         this._subscriptions = [];
         this._refreshSources = new Map();
-        this._players = new Map();
         this._recent = new Map();
         this._busNames = new Set();
         this._owners = new Map();
@@ -124,7 +123,6 @@ export class MprisMonitor {
                     this._refresh(name);
                 } else {
                     this._busNames.delete(name);
-                    this._players.delete(name);
                     this._markInactive(name);
                 }
                 this._publishVideos();
@@ -152,7 +150,6 @@ export class MprisMonitor {
         for (const id of this._refreshSources.values())
             GLib.Source.remove(id);
         this._refreshSources.clear();
-        this._players.clear();
         this._recent.clear();
         this._busNames.clear();
         this._owners.clear();
@@ -242,16 +239,12 @@ export class MprisMonitor {
                 try {
                     const [properties] = connection.call_finish(result).deepUnpack();
                     const video = parseMprisProperties(properties, busName);
-                    if (video) {
-                        this._players.set(busName, video);
+                    if (video)
                         this._remember(video);
-                    } else {
-                        this._players.delete(busName);
+                    else
                         this._markInactive(busName);
-                    }
                     callback?.(video);
                 } catch (_) {
-                    this._players.delete(busName);
                     this._markInactive(busName);
                     callback?.(null);
                 }
