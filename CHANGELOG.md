@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Fix playback resume position: perform a dedicated MPRIS `Get Position` call
+  immediately before handing off to MPV, so the exact timestamp at the moment
+  the user clicks is used even when `GetAll` returns a stale or zero position
+  (observed with Zen Browser).
+
 ## 1.2.0
 
 - Align extension architecture with GNOME Extension Review Guidelines.
