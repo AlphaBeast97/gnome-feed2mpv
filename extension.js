@@ -134,8 +134,36 @@ export default class Feed2MpvExtension extends Extension {
             return;
         }
         this._monitor.refresh(selected.busName, refreshed => {
-            onSelected(refreshed?.url === selected.url ? refreshed : selected);
+            const video = refreshed?.url === selected.url ? refreshed : selected;
+            this._fetchPosition(video, onSelected);
         });
+    }
+
+    _fetchPosition(video, callback) {
+        if (!video.busName) {
+            callback(video);
+            return;
+        }
+        Gio.DBus.session.call(
+            video.busName, '/org/mpris/MediaPlayer2',
+            'org.freedesktop.DBus.Properties', 'Get',
+            new GLib.Variant('(ss)', ['org.mpris.MediaPlayer2.Player', 'Position']),
+            new GLib.VariantType('(v)'),
+            Gio.DBusCallFlags.NONE, 1000, this._lifetime,
+            (conn, result) => {
+                if (this._lifetime?.is_cancelled())
+                    return;
+                try {
+                    const [variant] = conn.call_finish(result).deepUnpack();
+                    const posUs = Number(variant.deepUnpack());
+                    const position = Number.isFinite(posUs) && posUs > 0
+                        ? Math.floor(posUs / 1_000_000) : video.position;
+                    callback({...video, position});
+                } catch (_) {
+                    callback(video);
+                }
+            }
+        );
     }
 
     _playVideo(video, options = {}) {
