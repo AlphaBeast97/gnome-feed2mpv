@@ -9,7 +9,7 @@ import {ClipboardHistory, readClipboardUrl} from './src/clipboard-history.js';
 import {MediaMenu} from './src/media-menu.js';
 import {MprisMonitor} from './src/mpris.js';
 import {MpvIpcMonitor} from './src/mpv-ipc.js';
-import {openInMpv, queueInMpv} from './src/player.js';
+import {openInMpv} from './src/player.js';
 import {VideoTitleResolver} from './src/video-title.js';
 import {menuTitle, videoKey} from './src/menu-utils.js';
 
@@ -115,7 +115,6 @@ export default class Feed2MpvExtension extends Extension {
     _selectedAction(action) {
         const handlers = {
             play: video => this._playVideo(video),
-            queue: video => this._queueVideo(video),
             audio: video => this._playVideo(video, {audioOnly: true}),
         };
         const handler = handlers[action];
@@ -150,14 +149,6 @@ export default class Feed2MpvExtension extends Extension {
             this._mpvTitle = null;
             Main.notify(this.metadata.name, 'Could not start MPV. Make sure mpv is installed and available on PATH.');
         }
-    }
-
-    _queueVideo(video) {
-        this._clearPlaybackErrorTimer();
-        this._lastPlaybackErrorAt = 0;
-        this._mpvTitle = video.title;
-        this._mpvMonitor.expectLoad('queue');
-        queueInMpv(video, () => this._playVideo(video), () => {}, this._lifetime);
     }
 
     _handleMpvPlaybackError(detail, source) {
@@ -231,7 +222,9 @@ export default class Feed2MpvExtension extends Extension {
     _onVideosChanged(videos) {
         const selectedKey = this._videoKey(this._selectedVideo);
         this._videos = videos;
-        this._selectedVideo = videos.find(video => this._videoKey(video) === selectedKey)
+        const playing = videos.find(video => video.current && video.status === 'Playing');
+        this._selectedVideo = playing
+            ?? videos.find(video => this._videoKey(video) === selectedKey)
             ?? videos[0]
             ?? null;
         this._enrichClipboardTitles();

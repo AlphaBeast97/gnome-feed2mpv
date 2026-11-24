@@ -14,12 +14,12 @@ A GNOME Shell extension for handing browser media to MPV from one GNOME menu. It
 
 ## Why use MPV?
 
-This extension is for people who already use MPV and want web media in the same player setup as their local media: their playback configuration, key bindings, and scripts. Open the GNOME menu to choose a browser session, then play or queue it in MPV, continue from the reported position, or use audio-only playback. MPV and `yt-dlp` are required for streaming-site playback. The extension starts MPV itself; there is no browser-side extension or native-messaging helper to install and configure.
+This extension is for people who already use MPV and want web media in the same player setup as their local media: their playback configuration, key bindings, and scripts. Open the GNOME menu to choose a browser session, then play it in MPV, continue from the reported position, or use audio-only playback. MPV and `yt-dlp` are required for streaming-site playback. The extension starts MPV itself; there is no browser-side extension or native-messaging helper to install and configure.
 
 ## What it does
 
 - Detects media sessions published on MPRIS and lists the current and recently seen media.
-- Opens a selected URL in MPV, optionally starts audio-only playback, or queues a URL in an existing MPV process.
+- Opens a selected URL in MPV or optionally starts audio-only playback.
 - Shows MPV loading, playing, paused, and stopped controls in the extension menu.
 - Reports a desktop notification when MPV cannot play a link instead of stopping silently, with MPV's own error message when the extension launches it.
 - Keeps up to five copied media links in memory while the extension is enabled. It listens to GNOME Shell's clipboard selection change signal and reads only copied text that contains a URL, then keeps links that point at media: a direct audio or video file, an HLS/DASH manifest, or a page on a recognized streaming site. Other links are dropped without contacting the site. It neither changes the clipboard nor depends on a particular clipboard manager.
@@ -72,14 +72,13 @@ Clipboard history tracking and playback control do not require a clipboard manag
 ## Playback behavior
 
 - **Open Selected in MPV** starts the selected URL.
-- **Queue Selected in Running MPV** appends the URL through MPV's IPC socket when available. If there is no socket, the extension starts another MPV process.
 - **Open Selected Audio Only** starts MPV with video disabled. Pause/resume and stop remain available in the extension menu.
 - **Open Current Clipboard URL** reads the clipboard on activation and opens its HTTP(S) URL.
 - Selecting a recent copied URL opens it in MPV.
 
 When a browser session reports `Playing`, the extension pauses it before opening the same item in MPV. If MPRIS provides a playback position, MPV starts there. MPV's normal user configuration remains in effect; the extension does not change `ytdl-format` or other preferences.
 
-MPV's IPC socket is created at `$XDG_RUNTIME_DIR/mpvsocket`, inside the per-user runtime directory, so it is not reachable by other users. If another process uses this path or MPV uses a different socket path, queueing may not connect. Opening a URL in MPV remains available.
+MPV's IPC socket is created at `$XDG_RUNTIME_DIR/mpvsocket`, inside the per-user runtime directory, so it is not reachable by other users. If another process uses this path or MPV uses a different socket path, playback controls may not connect. Opening a URL in MPV remains available.
 
 ## Install from a checkout
 
@@ -126,7 +125,7 @@ The menu uses a title from a matching MPRIS session when one exists. Otherwise, 
 
 Confirm that `mpv` is available on `PATH`. For YouTube and many streaming sites, confirm that MPV can find a current `yt-dlp` executable. Try the URL directly in MPV to distinguish a detection issue from a site or extractor issue.
 
-When an MPV launch fails, the extension shows a notification containing MPV's own message, such as `Unsupported URL`, `Video unavailable`, or `Cannot open file`. A queued link that fails also produces a notification, but MPV exposes only a short reason over IPC; the detailed message appears when the extension launches MPV itself.
+When an MPV launch fails, the extension shows a notification containing MPV's own message, such as `Unsupported URL`, `Video unavailable`, or `Cannot open file`.
 
 ## Project layout
 
@@ -140,7 +139,7 @@ src/
   media-menu.js              Panel button and popup menu rendering
   mpris.js                   Browser media discovery and recent sessions
   mpv-ipc.js                 MPV state and playback controls
-  player.js                  MPV launching with error reporting, queueing, and current clipboard action
+  player.js                  MPV launching with error reporting and current clipboard action
   video-title.js             YouTube title lookup for exact video URLs
 tests/                       Focused GJS checks for parsers and state handling
 ```

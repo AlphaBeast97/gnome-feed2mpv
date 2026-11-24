@@ -1,6 +1,6 @@
 # Project brief
 
-GNOME Feed2MPV is a GNOME Shell extension for choosing browser media sessions and recent copied HTTP(S) links from the Shell menu, then playing or queueing them in MPV.
+GNOME Feed2MPV is a GNOME Shell extension for choosing browser media sessions and recent copied HTTP(S) links from the Shell menu, then playing them in MPV.
 
 ## Integration
 
@@ -13,7 +13,7 @@ GNOME Feed2MPV is a GNOME Shell extension for choosing browser media sessions an
 ## Playback
 
 - Require MPV; require `yt-dlp` for streaming-site playback.
-- Support starting selected media, queueing through MPV IPC, audio-only playback, and MPV controls from the extension menu.
+- Support starting selected media, audio-only playback, and MPV controls from the extension menu.
 - Pause a matching playing browser session before handoff and resume from its reported position when available.
 - Preserve the user's MPV configuration and avoid blocking I/O in GNOME Shell.
 

@@ -150,7 +150,6 @@ export class MediaMenu {
 
         this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this._addAction('Open Selected in MPV', () => this._actions.selectedAction('play'));
-        this._addAction('Queue Selected in Running MPV', () => this._actions.selectedAction('queue'));
         this._addAction('Open Selected Audio Only', () => this._actions.selectedAction('audio'));
         this._addAction('Open Current Clipboard URL', () => this._actions.clipboardAction());
 

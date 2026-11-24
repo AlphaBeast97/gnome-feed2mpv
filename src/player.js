@@ -85,38 +85,3 @@ export function openInMpv(video, options = {}, onError = () => {}, cancellable =
     pauseBrowser(video);
     return launch(argumentsFor(video, options), onError, cancellable);
 }
-
-export function queueInMpv(video, onUnavailable, onQueued = () => {}, cancellable = null) {
-    pauseBrowser(video);
-    const client = new Gio.SocketClient();
-    const address = new Gio.UnixSocketAddress({path: MPV_SOCKET});
-    client.connect_async(address, cancellable, (socketClient, result) => {
-        if (cancellable?.is_cancelled())
-            return;
-        let connection;
-        try {
-            connection = socketClient.connect_finish(result);
-        } catch (_) {
-            onUnavailable();
-            return;
-        }
-
-        const payload = JSON.stringify({command: ['loadfile', video.url, 'append-play']}) + '\n';
-        const bytes = new TextEncoder().encode(payload);
-        connection.get_output_stream().write_all_async(
-            bytes, GLib.PRIORITY_DEFAULT, cancellable, (stream, writeResult) => {
-                if (cancellable?.is_cancelled()) {
-                    connection.close(null);
-                    return;
-                }
-                try {
-                    stream.write_all_finish(writeResult);
-                    connection.close(null);
-                    onQueued();
-                } catch (_) {
-                    connection.close(null);
-                    onUnavailable();
-                }
-            });
-    });
-}
