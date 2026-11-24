@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+- Align extension architecture with GNOME Extension Review Guidelines.
+- Extract media menu UI logic into a dedicated module (`MediaMenu`).
+- Replace boolean destruction flags with `Gio.Cancellable` propagation and generation tracking.
+- Isolate clipboard reading from background player logic and defer YouTube oEmbed title lookups until the menu opens.
+- Remove the MPV queue action in favor of clean single-player playback and playback controls.
+- Prioritize actively playing browser sessions on MPRIS updates so the current video is selected automatically.
+- Maintain full compatibility with Zen Browser and other MPRIS players.
+
+## 1.1.5
+
+- Parse media URLs once during clipboard and MPRIS processing.
+
 ## 1.1.4
 
 - Remove redundant state guards where initialization and teardown already guarantee the required objects.
