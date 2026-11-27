@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- Deduplicate YouTube URL and video ID parsing across MPRIS and clipboard utilities.
+- Propagate `Gio.Cancellable` to the clipboard history D-Bus proxy, browser pause D-Bus call, and MPV socket directory monitor.
+
 ## 1.2.1
 
 - Fix playback resume position: perform a dedicated MPRIS `Get Position` call

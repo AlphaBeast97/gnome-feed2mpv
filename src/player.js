@@ -62,12 +62,12 @@ function launch(args, onError, cancellable = null) {
     return true;
 }
 
-function pauseBrowser(video) {
+function pauseBrowser(video, cancellable = null) {
     if (video.status !== 'Playing')
         return;
     Gio.DBus.session.call(
         video.busName, '/org/mpris/MediaPlayer2', 'org.mpris.MediaPlayer2.Player',
-        'Pause', null, null, Gio.DBusCallFlags.NONE, 1000, null, () => {});
+        'Pause', null, null, Gio.DBusCallFlags.NONE, 1000, cancellable, () => {});
 }
 
 function argumentsFor(video, {audioOnly = false} = {}) {
@@ -82,6 +82,6 @@ function argumentsFor(video, {audioOnly = false} = {}) {
 }
 
 export function openInMpv(video, options = {}, onError = () => {}, cancellable = null) {
-    pauseBrowser(video);
+    pauseBrowser(video, cancellable);
     return launch(argumentsFor(video, options), onError, cancellable);
 }

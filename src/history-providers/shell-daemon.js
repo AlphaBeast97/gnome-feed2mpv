@@ -1,4 +1,5 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 import {isStreamableUrl, urlFromText, videoFromUrl} from '../clipboard-utils.js';
 
@@ -37,17 +38,17 @@ export class ShellHistoryProvider {
     constructor() {
         this._proxy = null;
         this._generation = 0;
-        const generation = this._generation;
+        this._cancellable = new Gio.Cancellable();
         const Proxy = Gio.DBusProxy.makeProxyWrapper(PROXY_XML);
         new Proxy(Gio.DBus.session, BUS_NAME, OBJECT_PATH, (proxy, error) => {
-            if (generation === this._generation && !error)
+            if (!this._cancellable.is_cancelled() && !error)
                 this._proxy = proxy;
-        });
+        }, this._cancellable);
     }
 
     refresh(callback) {
         const generation = ++this._generation;
-        if (!this._proxy) {
+        if (!this._proxy || this._cancellable.is_cancelled()) {
             callback([]);
             return;
         }
@@ -56,7 +57,7 @@ export class ShellHistoryProvider {
         const videos = [];
         const seen = new Set();
         const readNext = index => {
-            if (generation !== this._generation)
+            if (generation !== this._generation || this._cancellable.is_cancelled())
                 return;
             if (index >= items.length || videos.length >= RESULT_LIMIT) {
                 callback(videos);
@@ -65,24 +66,36 @@ export class ShellHistoryProvider {
 
             const item = items[index];
             const previewUrl = urlFromText(item.preview);
-            this._proxy.GetTextRemote(item.id, (result, error) => {
-                if (generation !== this._generation)
-                    return;
-                const url = error ? previewUrl : urlFromText(result?.[0]) ?? previewUrl;
-                if (url && isStreamableUrl(url) && !seen.has(url)) {
-                    const video = videoFromUrl(url, itemTime(item));
-                    video.source = 'clipboard-history-provider';
-                    seen.add(url);
-                    videos.push(video);
-                }
-                readNext(index + 1);
-            });
+            this._proxy.call(
+                'GetText',
+                new GLib.Variant('(t)', [item.id]),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                this._cancellable,
+                (proxy, result) => {
+                    if (generation !== this._generation || this._cancellable.is_cancelled())
+                        return;
+                    let text = null;
+                    try {
+                        [text] = proxy.call_finish(result).deepUnpack();
+                    } catch (_) {
+                    }
+                    const url = urlFromText(text) ?? previewUrl;
+                    if (url && isStreamableUrl(url) && !seen.has(url)) {
+                        const video = videoFromUrl(url, itemTime(item));
+                        video.source = 'clipboard-history-provider';
+                        seen.add(url);
+                        videos.push(video);
+                    }
+                    readNext(index + 1);
+                });
         };
         readNext(0);
     }
 
     destroy() {
         this._generation++;
+        this._cancellable.cancel();
         this._proxy = null;
     }
 }

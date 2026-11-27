@@ -236,7 +236,7 @@ export class MpvIpcMonitor {
         const socketFile = Gio.File.new_for_path(MPV_SOCKET);
         try {
             this._socketMonitor = socketFile.get_parent().monitor_directory(
-                Gio.FileMonitorFlags.WATCH_MOVES, null);
+                Gio.FileMonitorFlags.WATCH_MOVES, this._cancellable);
         } catch (_) {
             this._socketMonitor = null;
             return;

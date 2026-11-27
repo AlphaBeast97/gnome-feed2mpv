@@ -36,23 +36,25 @@ export function parseMprisProperties(properties, busName) {
     };
 }
 
-function youtubeUrlFromUri(parsed) {
+export function youtubeVideoIdFromUri(parsed) {
     if (parsed.get_scheme() !== 'http' && parsed.get_scheme() !== 'https')
         return null;
     const host = parsed.get_host()?.toLowerCase().replace(/^www\./, '');
     if (host === 'youtu.be') {
         const id = parsed.get_path().split('/').filter(Boolean)[0];
-        return validId(id) ? `https://www.youtube.com/watch?v=${id}` : null;
+        return validId(id) ? id : null;
     }
     if (host === 'youtube.com' || host?.endsWith('.youtube.com')) {
         const params = GLib.Uri.parse_params(parsed.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
-        const id = params.v;
-        if (validId(id))
-            return `https://www.youtube.com/watch?v=${id}`;
-        const match = parsed.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/);
-        return match ? `https://www.youtube.com/watch?v=${match[1]}` : null;
+        const id = params.v ?? parsed.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/)?.[1];
+        return validId(id) ? id : null;
     }
     return null;
+}
+
+function youtubeUrlFromUri(parsed) {
+    const id = youtubeVideoIdFromUri(parsed);
+    return id ? `https://www.youtube.com/watch?v=${id}` : null;
 }
 
 function youtubeUrl(value) {

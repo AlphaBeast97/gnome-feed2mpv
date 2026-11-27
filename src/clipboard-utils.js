@@ -1,6 +1,6 @@
 import GLib from 'gi://GLib';
 
-import {mediaUrl} from './mpris.js';
+import {mediaUrl, youtubeVideoIdFromUri} from './mpris.js';
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/i;
 
@@ -28,19 +28,6 @@ export function urlFromText(text) {
     if (!match)
         return null;
     return mediaUrl(match[0].replace(/[),.;!?\]}]+$/, ''));
-}
-
-function youtubeVideoIdFromUri(uri) {
-    const host = uri.get_host()?.toLowerCase().replace(/^www\./, '');
-    if (host === 'youtu.be') {
-        const id = uri.get_path().split('/').filter(Boolean)[0];
-        return validYouTubeId(id) ? id : null;
-    }
-    if (host !== 'youtube.com' && !host?.endsWith('.youtube.com'))
-        return null;
-    const params = GLib.Uri.parse_params(uri.get_query() ?? '', -1, '&', GLib.UriParamsFlags.NONE);
-    const id = params.v ?? uri.get_path().match(/^\/(?:shorts|live|embed)\/([\w-]{11})/)?.[1];
-    return validYouTubeId(id) ? id : null;
 }
 
 export function youtubeVideoId(url) {
@@ -90,8 +77,4 @@ function hasMediaExtension(path) {
     if (dot <= 0)
         return false;
     return MEDIA_EXTENSIONS.has(basename.slice(dot + 1).toLowerCase());
-}
-
-function validYouTubeId(value) {
-    return typeof value === 'string' && /^[\w-]{11}$/.test(value);
 }
