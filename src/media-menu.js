@@ -143,7 +143,7 @@ export class MediaMenu {
             }
             if (recent.length > 0) {
                 this._addHeading('Recently Seen');
-                for (const video of recent)
+                for (const video of recent.slice(0, 5))
                     this._addVideo(video, 'Recent');
             }
         }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.4
+
+- Deduplicate the Recently Seen list: the same video can no longer appear more than once regardless of which browser reported it; replaying a video moves it to the top instead of adding a second entry.
+- Limit Recently Seen to the five most recently played videos.
+
 ## 1.2.2
 
 - Deduplicate YouTube URL and video ID parsing across MPRIS and clipboard utilities.

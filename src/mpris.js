@@ -4,8 +4,7 @@ import GLib from 'gi://GLib';
 const MPRIS_PREFIX = 'org.mpris.MediaPlayer2.';
 const MPRIS_PLAYER_INTERFACE = 'org.mpris.MediaPlayer2.Player';
 const OBJECT_PATH = '/org/mpris/MediaPlayer2';
-const MAX_RECENT_PER_PLAYER = 5;
-const MAX_RECENT_TOTAL = 20;
+const MAX_RECENT_SHOWN = 5;
 const PROPERTY_REFRESH_DELAY_MS = 150;
 
 function unwrap(value) {
@@ -260,21 +259,24 @@ export class MprisMonitor {
     }
 
     _remember(video) {
-        const key = `${video.busName}\n${video.url}`;
+        // Key by URL only so the same video never appears twice regardless of
+        // which player reported it. Deleting before re-inserting moves the
+        // entry to the end of the Map (most-recent position).
+        const key = video.url;
         for (const [entryKey, entry] of this._recent) {
-            if (entry.busName === video.busName)
+            if (entry.busName === video.busName && entryKey !== key)
                 this._recent.set(entryKey, {...entry, current: false, status: 'Previous'});
         }
         this._recent.delete(key);
         this._recent.set(key, {...video, current: true});
 
-        const playerEntries = [...this._recent]
-            .filter(([, entry]) => entry.busName === video.busName)
+        // Keep at most MAX_RECENT_SHOWN non-current (recently seen) entries.
+        // Evict the oldest non-current ones first; never evict the current one.
+        const nonCurrent = [...this._recent]
+            .filter(([, entry]) => !entry.current)
             .map(([entryKey]) => entryKey);
-        while (playerEntries.length > MAX_RECENT_PER_PLAYER)
-            this._recent.delete(playerEntries.shift());
-        while (this._recent.size > MAX_RECENT_TOTAL)
-            this._recent.delete(this._recent.keys().next().value);
+        while (nonCurrent.length > MAX_RECENT_SHOWN)
+            this._recent.delete(nonCurrent.shift());
     }
 
     _markInactive(busName) {
